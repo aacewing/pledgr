@@ -1,0 +1,26 @@
+{
+  "name": "pledgr",
+  "version": "1.0.0",
+  "description": "Support artists, fuel creativity - A Patreon-like platform for creators",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server -p 8000 -o",
+    "dev": "npx live-server --port=8000 --open=/index.html",
+    "build": "echo 'Static site - no build required'",
+    "deploy": "echo 'Ready for deployment'"
+  },
+  "keywords": [
+    "artists",
+    "creators",
+    "pledge",
+    "support",
+    "patreon",
+    "fanbox"
+  ],
+  "author": "Pledgr Team",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1",
+    "live-server": "^1.2.2"
+  }
+} 
