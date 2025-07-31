@@ -1,3 +1,577 @@
+// User Authentication System
+class UserAuth {
+    static currentUser = null;
+    static users = JSON.parse(localStorage.getItem('pledgr_users') || '[]');
+    static sessions = JSON.parse(localStorage.getItem('pledgr_sessions') || '{}');
+
+    // Initialize user system
+    static init() {
+        this.checkSession();
+        this.updateUI();
+    }
+
+    // Check for existing session
+    static checkSession() {
+        const sessionId = localStorage.getItem('pledgr_session_id');
+        if (sessionId && this.sessions[sessionId]) {
+            const user = this.users.find(u => u.id === this.sessions[sessionId].userId);
+            if (user) {
+                this.currentUser = user;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Register new user
+    static async register(userData) {
+        // Validate input
+        if (!userData.name || !userData.email || !userData.password) {
+            throw new Error('All fields are required');
+        }
+
+        if (userData.password.length < 6) {
+            throw new Error('Password must be at least 6 characters');
+        }
+
+        if (this.users.find(u => u.email === userData.email)) {
+            throw new Error('Email already registered');
+        }
+
+        // Create new user
+        const newUser = {
+            id: Date.now().toString(),
+            name: userData.name,
+            email: userData.email,
+            password: await this.hashPassword(userData.password),
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=random`,
+            createdAt: new Date().toISOString(),
+            isCreator: false,
+            pledges: [],
+            followers: [],
+            following: [],
+            bio: '',
+            website: '',
+            social: {
+                twitter: '',
+                instagram: '',
+                youtube: ''
+            }
+        };
+
+        this.users.push(newUser);
+        this.saveUsers();
+        
+        // Auto-login after registration
+        return this.login(userData.email, userData.password);
+    }
+
+    // Login user
+    static async login(email, password) {
+        const user = this.users.find(u => u.email === email);
+        if (!user) {
+            throw new Error('Invalid email or password');
+        }
+
+        const isValidPassword = await this.verifyPassword(password, user.password);
+        if (!isValidPassword) {
+            throw new Error('Invalid email or password');
+        }
+
+        // Create session
+        const sessionId = this.generateSessionId();
+        this.sessions[sessionId] = {
+            userId: user.id,
+            createdAt: new Date().toISOString(),
+            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
+        };
+
+        localStorage.setItem('pledgr_session_id', sessionId);
+        this.saveSessions();
+        
+        this.currentUser = user;
+        this.updateUI();
+        
+        return user;
+    }
+
+    // Logout user
+    static logout() {
+        const sessionId = localStorage.getItem('pledgr_session_id');
+        if (sessionId) {
+            delete this.sessions[sessionId];
+            this.saveSessions();
+        }
+        
+        localStorage.removeItem('pledgr_session_id');
+        this.currentUser = null;
+        this.updateUI();
+    }
+
+    // Update user profile
+    static updateProfile(userData) {
+        if (!this.currentUser) return false;
+
+        const userIndex = this.users.findIndex(u => u.id === this.currentUser.id);
+        if (userIndex === -1) return false;
+
+        // Update user data
+        this.users[userIndex] = {
+            ...this.users[userIndex],
+            ...userData,
+            updatedAt: new Date().toISOString()
+        };
+
+        this.currentUser = this.users[userIndex];
+        this.saveUsers();
+        this.updateUI();
+        
+        return true;
+    }
+
+    // Make user a creator
+    static becomeCreator(creatorData) {
+        if (!this.currentUser) return false;
+
+        const userIndex = this.users.findIndex(u => u.id === this.currentUser.id);
+        if (userIndex === -1) return false;
+
+        this.users[userIndex] = {
+            ...this.users[userIndex],
+            isCreator: true,
+            creatorProfile: {
+                title: creatorData.title,
+                description: creatorData.description,
+                category: creatorData.category,
+                goal: creatorData.goal,
+                image: creatorData.image || this.currentUser.avatar,
+                pledgeLevels: creatorData.pledgeLevels || []
+            },
+            updatedAt: new Date().toISOString()
+        };
+
+        this.currentUser = this.users[userIndex];
+        this.saveUsers();
+        this.updateUI();
+        
+        return true;
+    }
+
+    // Add pledge to user's pledges
+    static addPledge(pledgeData) {
+        if (!this.currentUser) return false;
+
+        const pledge = {
+            id: Date.now().toString(),
+            artistId: pledgeData.artistId,
+            artistName: pledgeData.artistName,
+            levelId: pledgeData.levelId,
+            levelName: pledgeData.levelName,
+            amount: pledgeData.amount,
+            date: new Date().toISOString(),
+            status: 'active'
+        };
+
+        this.currentUser.pledges.push(pledge);
+        this.updateUser();
+        
+        return pledge;
+    }
+
+    // Helper methods
+    static async hashPassword(password) {
+        // Simple hash for demo - in production use proper hashing
+        return btoa(password + 'pledgr_salt');
+    }
+
+    static async verifyPassword(password, hashedPassword) {
+        return btoa(password + 'pledgr_salt') === hashedPassword;
+    }
+
+    static generateSessionId() {
+        return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    static saveUsers() {
+        localStorage.setItem('pledgr_users', JSON.stringify(this.users));
+    }
+
+    static saveSessions() {
+        localStorage.setItem('pledgr_sessions', JSON.stringify(this.sessions));
+    }
+
+    static updateUser() {
+        const userIndex = this.users.findIndex(u => u.id === this.currentUser.id);
+        if (userIndex !== -1) {
+            this.users[userIndex] = this.currentUser;
+            this.saveUsers();
+        }
+    }
+
+    // Update UI based on authentication state
+    static updateUI() {
+        const navMenu = document.querySelector('.nav-menu');
+        const authButton = navMenu.querySelector('.btn-primary');
+        
+        if (this.currentUser) {
+            // User is logged in
+            authButton.innerHTML = `
+                <div class="user-menu">
+                    <img src="${this.currentUser.avatar}" alt="${this.currentUser.name}" class="user-avatar">
+                    <span>${this.currentUser.name}</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+            `;
+            authButton.onclick = () => this.toggleUserMenu();
+            
+            // Add user menu dropdown
+            this.createUserMenu();
+        } else {
+            // User is logged out
+            authButton.innerHTML = 'Sign In';
+            authButton.onclick = () => openModal('loginModal');
+            
+            // Remove user menu if exists
+            const existingMenu = document.querySelector('.user-dropdown');
+            if (existingMenu) existingMenu.remove();
+        }
+    }
+
+    // Create user menu dropdown
+    static createUserMenu() {
+        const existingMenu = document.querySelector('.user-dropdown');
+        if (existingMenu) existingMenu.remove();
+
+        const navMenu = document.querySelector('.nav-menu');
+        const dropdown = document.createElement('div');
+        dropdown.className = 'user-dropdown';
+        dropdown.innerHTML = `
+            <div class="dropdown-header">
+                <img src="${this.currentUser.avatar}" alt="${this.currentUser.name}">
+                <div>
+                    <h4>${this.currentUser.name}</h4>
+                    <p>${this.currentUser.email}</p>
+                </div>
+            </div>
+            <div class="dropdown-menu">
+                <a href="#" onclick="UserAuth.openProfile()">
+                    <i class="fas fa-user"></i> My Profile
+                </a>
+                <a href="#" onclick="UserAuth.openPledges()">
+                    <i class="fas fa-heart"></i> My Pledges
+                </a>
+                ${this.currentUser.isCreator ? `
+                    <a href="#" onclick="UserAuth.openCreatorDashboard()">
+                        <i class="fas fa-cog"></i> Creator Dashboard
+                    </a>
+                ` : `
+                    <a href="#" onclick="UserAuth.openBecomeCreator()">
+                        <i class="fas fa-star"></i> Become a Creator
+                    </a>
+                `}
+                <div class="dropdown-divider"></div>
+                <a href="#" onclick="UserAuth.logout()">
+                    <i class="fas fa-sign-out-alt"></i> Sign Out
+                </a>
+            </div>
+        `;
+
+        navMenu.appendChild(dropdown);
+    }
+
+    // Toggle user menu
+    static toggleUserMenu() {
+        const dropdown = document.querySelector('.user-dropdown');
+        if (dropdown) {
+            dropdown.classList.toggle('active');
+        }
+    }
+
+    // Open profile modal
+    static openProfile() {
+        this.createProfileModal();
+        openModal('profileModal');
+    }
+
+    // Open pledges modal
+    static openPledges() {
+        this.createPledgesModal();
+        openModal('pledgesModal');
+    }
+
+    // Open become creator modal
+    static openBecomeCreator() {
+        this.createBecomeCreatorModal();
+        openModal('becomeCreatorModal');
+    }
+
+    // Open creator dashboard
+    static openCreatorDashboard() {
+        if (!this.currentUser.isCreator) return;
+        
+        // Find the artist data for current user
+        const artist = artists.find(a => a.name === this.currentUser.name);
+        if (artist) {
+            CreatorDashboard.openDashboard(artist.id);
+        } else {
+            // Create new artist entry for the user
+            const newArtist = {
+                id: Date.now(),
+                name: this.currentUser.name,
+                category: this.currentUser.creatorProfile?.category || 'visual',
+                title: this.currentUser.creatorProfile?.title || 'My Creative Project',
+                description: this.currentUser.creatorProfile?.description || 'Support my creative journey!',
+                image: this.currentUser.creatorProfile?.image || this.currentUser.avatar,
+                profileImage: this.currentUser.avatar,
+                pledged: 0,
+                goal: this.currentUser.creatorProfile?.goal || 1000,
+                supporters: 0,
+                daysLeft: 30,
+                monthlyPledges: 0,
+                pledgeLevels: this.currentUser.creatorProfile?.pledgeLevels || []
+            };
+            
+            artists.unshift(newArtist);
+            CreatorDashboard.openDashboard(newArtist.id);
+        }
+    }
+
+    // Create profile modal
+    static createProfileModal() {
+        if (!this.currentUser) return;
+
+        const modal = document.getElementById('profileModal') || this.createModal('profileModal', 'My Profile');
+        const content = modal.querySelector('.modal-content');
+        
+        content.innerHTML = `
+            <div class="profile-form">
+                <div class="profile-avatar">
+                    <img src="${this.currentUser.avatar}" alt="${this.currentUser.name}">
+                    <button class="btn-secondary btn-small">Change Avatar</button>
+                </div>
+                
+                <form id="profileForm">
+                    <div class="form-group">
+                        <label for="profileName">Full Name</label>
+                        <input type="text" id="profileName" value="${this.currentUser.name}" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="profileEmail">Email</label>
+                        <input type="email" id="profileEmail" value="${this.currentUser.email}" readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="profileBio">Bio</label>
+                        <textarea id="profileBio" rows="3">${this.currentUser.bio || ''}</textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="profileWebsite">Website</label>
+                        <input type="url" id="profileWebsite" value="${this.currentUser.website || ''}">
+                    </div>
+                    
+                    <div class="social-links">
+                        <h4>Social Links</h4>
+                        <div class="form-group">
+                            <label for="profileTwitter">Twitter</label>
+                            <input type="url" id="profileTwitter" value="${this.currentUser.social?.twitter || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label for="profileInstagram">Instagram</label>
+                            <input type="url" id="profileInstagram" value="${this.currentUser.social?.instagram || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label for="profileYoutube">YouTube</label>
+                            <input type="url" id="profileYoutube" value="${this.currentUser.social?.youtube || ''}">
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn-primary">Save Changes</button>
+                </form>
+            </div>
+        `;
+
+        // Handle profile form submission
+        const form = content.querySelector('#profileForm');
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            this.updateProfile({
+                name: document.getElementById('profileName').value,
+                bio: document.getElementById('profileBio').value,
+                website: document.getElementById('profileWebsite').value,
+                social: {
+                    twitter: document.getElementById('profileTwitter').value,
+                    instagram: document.getElementById('profileInstagram').value,
+                    youtube: document.getElementById('profileYoutube').value
+                }
+            });
+            closeModal('profileModal');
+            showSuccessMessage('Profile updated successfully!');
+        };
+    }
+
+    // Create pledges modal
+    static createPledgesModal() {
+        if (!this.currentUser) return;
+
+        const modal = document.getElementById('pledgesModal') || this.createModal('pledgesModal', 'My Pledges');
+        const content = modal.querySelector('.modal-content');
+        
+        const pledges = this.currentUser.pledges || [];
+        
+        content.innerHTML = `
+            <div class="pledges-content">
+                ${pledges.length === 0 ? `
+                    <div class="empty-state">
+                        <i class="fas fa-heart"></i>
+                        <h3>No pledges yet</h3>
+                        <p>Start supporting creators to see your pledges here!</p>
+                        <button class="btn-primary" onclick="closeModal('pledgesModal'); scrollToSection('artists')">
+                            Discover Artists
+                        </button>
+                    </div>
+                ` : `
+                    <div class="pledges-list">
+                        ${pledges.map(pledge => `
+                            <div class="pledge-item">
+                                <div class="pledge-info">
+                                    <h4>${pledge.artistName}</h4>
+                                    <p class="pledge-level">${pledge.levelName}</p>
+                                    <p class="pledge-amount">$${pledge.amount}/month</p>
+                                    <p class="pledge-date">Since ${new Date(pledge.date).toLocaleDateString()}</p>
+                                </div>
+                                <div class="pledge-actions">
+                                    <button class="btn-secondary btn-small" onclick="UserAuth.cancelPledge('${pledge.id}')">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `}
+            </div>
+        `;
+    }
+
+    // Create become creator modal
+    static createBecomeCreatorModal() {
+        if (!this.currentUser) return;
+
+        const modal = document.getElementById('becomeCreatorModal') || this.createModal('becomeCreatorModal', 'Become a Creator');
+        const content = modal.querySelector('.modal-content');
+        
+        content.innerHTML = `
+            <div class="creator-form">
+                <div class="creator-intro">
+                    <h3>Share Your Creativity</h3>
+                    <p>Start your creator journey and connect with supporters who believe in your vision.</p>
+                </div>
+                
+                <form id="creatorForm">
+                    <div class="form-group">
+                        <label for="creatorTitle">Project Title</label>
+                        <input type="text" id="creatorTitle" placeholder="e.g., My Digital Art Collection" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="creatorCategory">Category</label>
+                        <select id="creatorCategory" required>
+                            <option value="">Select a category</option>
+                            <option value="visual">Visual Arts</option>
+                            <option value="music">Music</option>
+                            <option value="writing">Writing</option>
+                            <option value="film">Film & Video</option>
+                            <option value="photography">Photography</option>
+                            <option value="crafts">Crafts & DIY</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="creatorDescription">Project Description</label>
+                        <textarea id="creatorDescription" rows="4" placeholder="Tell supporters about your creative project..." required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="creatorGoal">Monthly Goal ($)</label>
+                        <input type="number" id="creatorGoal" min="1" value="100" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="creatorImage">Project Image URL</label>
+                        <input type="url" id="creatorImage" placeholder="https://example.com/image.jpg">
+                    </div>
+                    
+                    <button type="submit" class="btn-primary">Create Creator Profile</button>
+                </form>
+            </div>
+        `;
+
+        // Handle creator form submission
+        const form = content.querySelector('#creatorForm');
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            
+            const creatorData = {
+                title: document.getElementById('creatorTitle').value,
+                category: document.getElementById('creatorCategory').value,
+                description: document.getElementById('creatorDescription').value,
+                goal: parseInt(document.getElementById('creatorGoal').value),
+                image: document.getElementById('creatorImage').value || this.currentUser.avatar,
+                pledgeLevels: [
+                    {
+                        id: 1,
+                        name: "Supporter",
+                        amount: 5,
+                        description: "Basic support level",
+                        benefits: ["Monthly updates", "Early access"],
+                        supporters: 0
+                    },
+                    {
+                        id: 2,
+                        name: "Fan",
+                        amount: 15,
+                        description: "Enhanced support level",
+                        benefits: ["Exclusive content", "Behind-the-scenes"],
+                        supporters: 0
+                    }
+                ]
+            };
+            
+            this.becomeCreator(creatorData);
+            closeModal('becomeCreatorModal');
+            showSuccessMessage('Creator profile created successfully!');
+            this.updateUI();
+        };
+    }
+
+    // Create modal helper
+    static createModal(id, title) {
+        const modal = document.createElement('div');
+        modal.id = id;
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <span class="close" onclick="closeModal('${id}')">&times;</span>
+                <h2>${title}</h2>
+                <div class="modal-body"></div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        return modal;
+    }
+
+    // Cancel pledge
+    static cancelPledge(pledgeId) {
+        if (!this.currentUser) return;
+        
+        this.currentUser.pledges = this.currentUser.pledges.filter(p => p.id !== pledgeId);
+        this.updateUser();
+        this.createPledgesModal(); // Refresh the modal
+        showSuccessMessage('Pledge cancelled successfully!');
+    }
+}
+
 // Enhanced artist data with pledge levels
 const artists = [
     {
@@ -176,6 +750,11 @@ const PLATFORM_FEE_PERCENTAGE = 5;
 // Payment processing simulation
 class PaymentProcessor {
     static async processPledge(artistId, pledgeLevelId, paymentMethod) {
+        // Check if user is logged in
+        if (!UserAuth.currentUser) {
+            throw new Error('Please sign in to make a pledge');
+        }
+        
         const artist = artists.find(a => a.id === artistId);
         const pledgeLevel = artist.pledgeLevels.find(p => p.id === pledgeLevelId);
         
@@ -188,25 +767,57 @@ class PaymentProcessor {
         const platformFee = (pledgeAmount * PLATFORM_FEE_PERCENTAGE) / 100;
         const artistReceives = pledgeAmount - platformFee;
         
-        // Simulate payment processing
-        const paymentResult = await this.simulatePayment(pledgeAmount, paymentMethod);
-        
-        if (paymentResult.success) {
-            // Update artist stats
-            artist.pledged += pledgeAmount;
-            artist.supporters += 1;
-            pledgeLevel.supporters += 1;
-            
-            return {
-                success: true,
-                transactionId: paymentResult.transactionId,
-                amount: pledgeAmount,
-                platformFee: platformFee,
-                artistReceives: artistReceives,
-                message: `Successfully pledged $${pledgeAmount} to ${artist.name}`
-            };
+        // Use Stripe for real payments
+        if (window.StripePaymentProcessor) {
+            try {
+                const paymentResult = await window.StripePaymentProcessor.processPayment(artistId, pledgeLevelId);
+                
+                // Add pledge to user's pledges if successful
+                if (paymentResult.success) {
+                    UserAuth.addPledge({
+                        artistId: artistId,
+                        artistName: artist.name,
+                        levelId: pledgeLevelId,
+                        levelName: pledgeLevel.name,
+                        amount: pledgeAmount
+                    });
+                }
+                
+                return paymentResult;
+            } catch (error) {
+                // Fallback to simulation if Stripe fails
+                console.warn('Stripe failed, using simulation:', error);
+                const result = await this.simulatePayment(pledgeAmount, paymentMethod);
+                
+                // Add pledge to user's pledges if successful
+                if (result.success) {
+                    UserAuth.addPledge({
+                        artistId: artistId,
+                        artistName: artist.name,
+                        levelId: pledgeLevelId,
+                        levelName: pledgeLevel.name,
+                        amount: pledgeAmount
+                    });
+                }
+                
+                return result;
+            }
         } else {
-            throw new Error(paymentResult.error);
+            // Fallback to simulation if Stripe not loaded
+            const result = await this.simulatePayment(pledgeAmount, paymentMethod);
+            
+            // Add pledge to user's pledges if successful
+            if (result.success) {
+                UserAuth.addPledge({
+                    artistId: artistId,
+                    artistName: artist.name,
+                    levelId: pledgeLevelId,
+                    levelName: pledgeLevel.name,
+                    amount: pledgeAmount
+                });
+            }
+            
+            return result;
         }
     }
     
@@ -394,6 +1005,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
     setupSmoothScrolling();
     setupMobileMenu();
+    UserAuth.init(); // Initialize user authentication
 });
 
 // Load artists into the grid
@@ -482,27 +1094,56 @@ function setupEventListeners() {
         if (e.target.classList.contains('modal')) {
             closeModal(e.target.id);
         }
+        
+        // Close user dropdown when clicking outside
+        if (!e.target.closest('.user-menu') && !e.target.closest('.user-dropdown')) {
+            const dropdown = document.querySelector('.user-dropdown');
+            if (dropdown && dropdown.classList.contains('active')) {
+                dropdown.classList.remove('active');
+            }
+        }
     });
 }
 
 // Handle form submissions
-function handleFormSubmit(e) {
+async function handleFormSubmit(e) {
     e.preventDefault();
-    const formData = new FormData(e.target);
     
-    // Simulate form processing
-    const submitButton = e.target.querySelector('button[type="submit"]');
+    const form = e.target;
+    const submitButton = form.querySelector('button[type="submit"]');
     const originalText = submitButton.textContent;
+    
     submitButton.textContent = 'Processing...';
     submitButton.disabled = true;
     
-    setTimeout(() => {
-        alert('Thank you! Your submission has been received.');
-        closeModal(e.target.closest('.modal').id);
+    try {
+        if (form.id === 'loginForm') {
+            // Handle login
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            await UserAuth.login(email, password);
+            closeModal('loginModal');
+            showSuccessMessage('Welcome back!');
+            form.reset();
+            
+        } else if (form.id === 'signupForm') {
+            // Handle registration
+            const name = document.getElementById('signupName').value;
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            
+            await UserAuth.register({ name, email, password });
+            closeModal('signupModal');
+            showSuccessMessage('Account created successfully! Welcome to Pledgr!');
+            form.reset();
+        }
+    } catch (error) {
+        showErrorMessage(error.message);
+    } finally {
         submitButton.textContent = originalText;
         submitButton.disabled = false;
-        e.target.reset();
-    }, 1500);
+    }
 }
 
 // Modal functions
@@ -532,7 +1173,7 @@ function openArtistModal(artist) {
             <div class="artist-modal-header">
                 <img src="${artist.profileImage}" alt="${artist.name}" class="artist-profile-image">
                 <div class="artist-header-info">
-                    <h3>${artist.name}</h3>
+                <h3>${artist.name}</h3>
                     <p class="artist-category">${getCategoryName(artist.category)}</p>
                     <div class="artist-stats">
                         <span>${artist.supporters} supporters</span>
@@ -547,7 +1188,7 @@ function openArtistModal(artist) {
             <div class="artist-modal-body">
                 <div class="artist-description">
                     <h4>About This Project</h4>
-                    <p>${artist.description}</p>
+                <p>${artist.description}</p>
                 </div>
                 
                 <div class="pledge-levels-section">
@@ -558,16 +1199,16 @@ function openArtistModal(artist) {
                                 <div class="level-header">
                                     <h5>${level.name}</h5>
                                     <span class="level-amount">$${level.amount}/month</span>
-                                </div>
+                    </div>
                                 <p class="level-description">${level.description}</p>
                                 <div class="level-benefits">
                                     ${level.benefits.map(benefit => `
                                         <div class="benefit-item">
                                             <i class="fas fa-check"></i>
                                             <span>${benefit}</span>
-                                        </div>
+                    </div>
                                     `).join('')}
-                                </div>
+                    </div>
                                 <div class="level-supporters">
                                     <span>${level.supporters} supporters</span>
                                 </div>
@@ -584,12 +1225,12 @@ function openArtistModal(artist) {
                         <div class="form-group">
                             <label>Card Number</label>
                             <input type="text" placeholder="1234 5678 9012 3456" required>
-                        </div>
+                            </div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label>Expiry Date</label>
                                 <input type="text" placeholder="MM/YY" required>
-                            </div>
+                        </div>
                             <div class="form-group">
                                 <label>CVV</label>
                                 <input type="text" placeholder="123" required>
@@ -598,8 +1239,8 @@ function openArtistModal(artist) {
                         <div class="form-group">
                             <label>Name on Card</label>
                             <input type="text" placeholder="John Doe" required>
-                        </div>
-                        
+                </div>
+                
                         <div class="fee-breakdown">
                             <div class="fee-item">
                                 <span>Pledge Amount:</span>
@@ -618,7 +1259,7 @@ function openArtistModal(artist) {
                         <button type="submit" class="btn-primary btn-large">
                             <i class="fas fa-lock"></i>
                             Complete Pledge
-                        </button>
+                </button>
                     </form>
                 </div>
             </div>
@@ -668,42 +1309,118 @@ function selectPledgeLevel(artistId, levelId) {
 
 // Setup payment form
 function setupPaymentForm(artistId, levelId) {
-    const form = document.getElementById('paymentForm');
+    const artist = artists.find(a => a.id === artistId);
+    const pledgeLevel = artist.pledgeLevels.find(p => p.id === levelId);
     
-    form.onsubmit = async (e) => {
-        e.preventDefault();
+    const paymentSection = document.querySelector('.payment-section');
+    if (paymentSection) {
+        paymentSection.innerHTML = `
+            <h3>Complete Your Pledge</h3>
+            <div class="payment-form">
+                <div class="payment-options">
+                    <div class="payment-method active" onclick="switchPaymentMethod('paypal')">
+                        <input type="radio" name="payment-method" value="paypal" checked>
+                        <label>PayPal</label>
+                    </div>
+                    <div class="payment-method" onclick="switchPaymentMethod('stripe')">
+                        <input type="radio" name="payment-method" value="stripe">
+                        <label>Credit Card</label>
+                    </div>
+                    <div class="payment-method" onclick="switchPaymentMethod('card')">
+                        <input type="radio" name="payment-method" value="card">
+                        <label>Manual Entry</label>
+                    </div>
+                </div>
+                
+                <div id="paypal-payment" class="payment-option active">
+                    <div id="paypal-button-container"></div>
+                    <p class="payment-note">Pay securely with PayPal</p>
+                </div>
+                
+                <div id="stripe-payment" class="payment-option">
+                    <div id="stripe-card-element"></div>
+                    <p class="payment-note">Secure payment powered by Stripe</p>
+                </div>
+                
+                <div id="card-payment" class="payment-option">
+                    <form id="paymentForm">
+                        <div class="form-group">
+                            <label for="card-number">Card Number</label>
+                            <input type="text" id="card-number" placeholder="1234 5678 9012 3456" maxlength="19">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="expiry">Expiry</label>
+                                <input type="text" id="expiry" placeholder="MM/YY" maxlength="5">
+                            </div>
+                            <div class="form-group">
+                                <label for="cvv">CVV</label>
+                                <input type="text" id="cvv" placeholder="123" maxlength="4">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="name">Name on Card</label>
+                            <input type="text" id="name" placeholder="John Doe">
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            Pay $${pledgeLevel.amount}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        `;
         
-        const submitButton = form.querySelector('button[type="submit"]');
-        const originalText = submitButton.innerHTML;
+        // Setup form submission
+        const form = document.getElementById('paymentForm');
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            
+            const submitButton = form.querySelector('button[type="submit"]');
+            const originalText = submitButton.innerHTML;
+            
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            submitButton.disabled = true;
+            
+            try {
+                const result = await PaymentProcessor.processPledge(artistId, levelId, {
+                    cardNumber: form.querySelector('input[placeholder*="Card Number"]').value,
+                    expiryDate: form.querySelector('input[placeholder*="MM/YY"]').value,
+                    cvv: form.querySelector('input[placeholder*="CVV"]').value,
+                    name: form.querySelector('input[placeholder*="John Doe"]').value
+                });
+                
+                // Show success message
+                showSuccessMessage(result.message);
+                
+                // Close modal after delay
+                setTimeout(() => {
+                    closeModal('artistModal');
+                    // Refresh artist display
+                    loadArtists();
+                }, 2000);
+                
+            } catch (error) {
+                showErrorMessage(error.message);
+            } finally {
+                submitButton.innerHTML = originalText;
+                submitButton.disabled = false;
+            }
+        };
         
-        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-        submitButton.disabled = true;
-        
-        try {
-            const result = await PaymentProcessor.processPledge(artistId, levelId, {
-                cardNumber: form.querySelector('input[placeholder*="Card Number"]').value,
-                expiryDate: form.querySelector('input[placeholder*="MM/YY"]').value,
-                cvv: form.querySelector('input[placeholder*="CVV"]').value,
-                name: form.querySelector('input[placeholder*="John Doe"]').value
-            });
-            
-            // Show success message
-            showSuccessMessage(result.message);
-            
-            // Close modal after delay
-            setTimeout(() => {
-                closeModal('artistModal');
-                // Refresh artist display
-                loadArtists();
-            }, 2000);
-            
-        } catch (error) {
-            showErrorMessage(error.message);
-        } finally {
-            submitButton.innerHTML = originalText;
-            submitButton.disabled = false;
+        // Initialize PayPal button if available
+        if (window.PayPalPaymentProcessor && window.PayPalPaymentProcessor.createPayPalButton) {
+            window.PayPalPaymentProcessor.createPayPalButton(artistId, levelId, 'paypal-button-container');
         }
-    };
+        
+        // Initialize Stripe card element if available
+        if (window.StripePaymentProcessor) {
+            const cardElement = window.StripePaymentProcessor.createCardElement();
+            const cardContainer = document.getElementById('stripe-card-element');
+            if (cardContainer) {
+                cardElement.mount('#stripe-card-element');
+            }
+        }
+    }
 }
 
 // Show success message
@@ -736,6 +1453,33 @@ function showErrorMessage(message) {
     setTimeout(() => {
         errorDiv.remove();
     }, 5000);
+}
+
+// Switch payment method
+function switchPaymentMethod(method) {
+    // Update radio buttons
+    document.querySelectorAll('input[name="payment-method"]').forEach(radio => {
+        radio.checked = radio.value === method;
+    });
+    
+    // Update payment method styling
+    document.querySelectorAll('.payment-method').forEach(el => {
+        el.classList.remove('active');
+    });
+    event.target.closest('.payment-method').classList.add('active');
+    
+    // Show/hide payment options
+    document.querySelectorAll('.payment-option').forEach(option => {
+        option.classList.remove('active');
+    });
+    
+    if (method === 'paypal') {
+        document.getElementById('paypal-payment').classList.add('active');
+    } else if (method === 'stripe') {
+        document.getElementById('stripe-payment').classList.add('active');
+    } else {
+        document.getElementById('card-payment').classList.add('active');
+    }
 }
 
 // Open pledge modal
