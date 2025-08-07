@@ -1,210 +1,206 @@
 // User Authentication System
 class UserAuth {
     static currentUser = null;
-    static users = JSON.parse(localStorage.getItem('pledgr_users') || '[]');
-    static sessions = JSON.parse(localStorage.getItem('pledgr_sessions') || '{}');
+    static token = localStorage.getItem('pledgr_token');
 
     // Initialize user system
-    static init() {
-        this.checkSession();
-        this.updateUI();
-    }
-
-    // Check for existing session
-    static checkSession() {
-        const sessionId = localStorage.getItem('pledgr_session_id');
-        if (sessionId && this.sessions[sessionId]) {
-            const user = this.users.find(u => u.id === this.sessions[sessionId].userId);
-            if (user) {
-                this.currentUser = user;
-                return true;
+    static async init() {
+        if (this.token) {
+            try {
+                const response = await fetch('/api/auth/me', {
+                    headers: {
+                        'Authorization': `Bearer ${this.token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    this.currentUser = data.user;
+                } else {
+                    // Token is invalid, clear it
+                    this.logout();
+                }
+            } catch (error) {
+                console.error('Failed to validate token:', error);
+                this.logout();
             }
         }
-        return false;
+        
+        this.updateUI();
     }
 
     // Register new user
     static async register(userData) {
-        // Validate input
-        if (!userData.name || !userData.email || !userData.password) {
-            throw new Error('All fields are required');
-        }
+        try {
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(userData)
+            });
 
-        if (userData.password.length < 6) {
-            throw new Error('Password must be at least 6 characters');
-        }
+            const data = await response.json();
 
-        if (this.users.find(u => u.email === userData.email)) {
-            throw new Error('Email already registered');
-        }
-
-        // Create new user
-        const newUser = {
-            id: Date.now().toString(),
-            name: userData.name,
-            email: userData.email,
-            password: await this.hashPassword(userData.password),
-            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=random`,
-            createdAt: new Date().toISOString(),
-            isCreator: false,
-            pledges: [],
-            followers: [],
-            following: [],
-            bio: '',
-            website: '',
-            social: {
-                twitter: '',
-                instagram: '',
-                youtube: ''
+            if (!response.ok) {
+                throw new Error(data.error || 'Registration failed');
             }
-        };
 
-        this.users.push(newUser);
-        this.saveUsers();
-        
-        // Auto-login after registration
-        return this.login(userData.email, userData.password);
+            // Store token and user data
+            this.token = data.token;
+            this.currentUser = data.user;
+            localStorage.setItem('pledgr_token', this.token);
+            
+            this.updateUI();
+            return data.user;
+        } catch (error) {
+            throw error;
+        }
     }
 
     // Login user
     static async login(email, password) {
-        const user = this.users.find(u => u.email === email);
-        if (!user) {
-            throw new Error('Invalid email or password');
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Login failed');
+            }
+
+            // Store token and user data
+            this.token = data.token;
+            this.currentUser = data.user;
+            localStorage.setItem('pledgr_token', this.token);
+            
+            this.updateUI();
+            return data.user;
+        } catch (error) {
+            throw error;
         }
-
-        const isValidPassword = await this.verifyPassword(password, user.password);
-        if (!isValidPassword) {
-            throw new Error('Invalid email or password');
-        }
-
-        // Create session
-        const sessionId = this.generateSessionId();
-        this.sessions[sessionId] = {
-            userId: user.id,
-            createdAt: new Date().toISOString(),
-            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
-        };
-
-        localStorage.setItem('pledgr_session_id', sessionId);
-        this.saveSessions();
-        
-        this.currentUser = user;
-        this.updateUI();
-        
-        return user;
     }
 
     // Logout user
     static logout() {
-        const sessionId = localStorage.getItem('pledgr_session_id');
-        if (sessionId) {
-            delete this.sessions[sessionId];
-            this.saveSessions();
-        }
-        
-        localStorage.removeItem('pledgr_session_id');
         this.currentUser = null;
+        this.token = null;
+        localStorage.removeItem('pledgr_token');
         this.updateUI();
     }
 
     // Update user profile
-    static updateProfile(userData) {
+    static async updateProfile(userData) {
         if (!this.currentUser) return false;
 
-        const userIndex = this.users.findIndex(u => u.id === this.currentUser.id);
-        if (userIndex === -1) return false;
+        try {
+            const response = await fetch('/api/auth/profile', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.token}`
+                },
+                body: JSON.stringify(userData)
+            });
 
-        // Update user data
-        this.users[userIndex] = {
-            ...this.users[userIndex],
-            ...userData,
-            updatedAt: new Date().toISOString()
-        };
+            const data = await response.json();
 
-        this.currentUser = this.users[userIndex];
-        this.saveUsers();
-        this.updateUI();
-        
-        return true;
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to update profile');
+            }
+
+            // Update current user data
+            this.currentUser = { ...this.currentUser, ...userData };
+            return true;
+        } catch (error) {
+            console.error('Failed to update profile:', error);
+            return false;
+        }
     }
 
     // Make user a creator
-    static becomeCreator(creatorData) {
+    static async becomeCreator(creatorData) {
         if (!this.currentUser) return false;
 
-        const userIndex = this.users.findIndex(u => u.id === this.currentUser.id);
-        if (userIndex === -1) return false;
+        try {
+            const response = await fetch('/api/artists', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.token}`
+                },
+                body: JSON.stringify(creatorData)
+            });
 
-        this.users[userIndex] = {
-            ...this.users[userIndex],
-            isCreator: true,
-            creatorProfile: {
-                title: creatorData.title,
-                description: creatorData.description,
-                category: creatorData.category,
-                goal: creatorData.goal,
-                image: creatorData.image || this.currentUser.avatar,
-                pledgeLevels: creatorData.pledgeLevels || []
-            },
-            updatedAt: new Date().toISOString()
-        };
+            const data = await response.json();
 
-        this.currentUser = this.users[userIndex];
-        this.saveUsers();
-        this.updateUI();
-        
-        return true;
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to become creator');
+            }
+
+            // Update current user to be a creator
+            this.currentUser.isCreator = true;
+            return true;
+        } catch (error) {
+            console.error('Failed to become creator:', error);
+            return false;
+        }
     }
 
     // Add pledge to user's pledges
-    static addPledge(pledgeData) {
+    static async addPledge(pledgeData) {
         if (!this.currentUser) return false;
 
-        const pledge = {
-            id: Date.now().toString(),
-            artistId: pledgeData.artistId,
-            artistName: pledgeData.artistName,
-            levelId: pledgeData.levelId,
-            levelName: pledgeData.levelName,
-            amount: pledgeData.amount,
-            date: new Date().toISOString(),
-            status: 'active'
-        };
+        try {
+            const response = await fetch('/api/pledges', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.token}`
+                },
+                body: JSON.stringify(pledgeData)
+            });
 
-        this.currentUser.pledges.push(pledge);
-        this.updateUser();
-        
-        return pledge;
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to create pledge');
+            }
+
+            return data.pledgeId;
+        } catch (error) {
+            console.error('Failed to create pledge:', error);
+            return false;
+        }
     }
 
-    // Helper methods
-    static async hashPassword(password) {
-        // Simple hash for demo - in production use proper hashing
-        return btoa(password + 'pledgr_salt');
-    }
+    // Get user pledges
+    static async getPledges() {
+        if (!this.currentUser) return [];
 
-    static async verifyPassword(password, hashedPassword) {
-        return btoa(password + 'pledgr_salt') === hashedPassword;
-    }
+        try {
+            const response = await fetch('/api/pledges', {
+                headers: {
+                    'Authorization': `Bearer ${this.token}`
+                }
+            });
 
-    static generateSessionId() {
-        return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    }
+            const data = await response.json();
 
-    static saveUsers() {
-        localStorage.setItem('pledgr_users', JSON.stringify(this.users));
-    }
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to get pledges');
+            }
 
-    static saveSessions() {
-        localStorage.setItem('pledgr_sessions', JSON.stringify(this.sessions));
-    }
-
-    static updateUser() {
-        const userIndex = this.users.findIndex(u => u.id === this.currentUser.id);
-        if (userIndex !== -1) {
-            this.users[userIndex] = this.currentUser;
-            this.saveUsers();
+            return data.pledges || [];
+        } catch (error) {
+            console.error('Failed to get pledges:', error);
+            return [];
         }
     }
 
@@ -212,79 +208,83 @@ class UserAuth {
     static updateUI() {
         const navMenu = document.querySelector('.nav-menu');
         const authButton = navMenu.querySelector('.btn-primary');
-        
+
         if (this.currentUser) {
             // User is logged in
-            authButton.innerHTML = `
-                <div class="user-menu">
-                    <img src="${this.currentUser.avatar}" alt="${this.currentUser.name}" class="user-avatar">
-                    <span>${this.currentUser.name}</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-            `;
-            authButton.onclick = () => this.toggleUserMenu();
+            authButton.style.display = 'none';
             
-            // Add user menu dropdown
-            this.createUserMenu();
+            // Create user menu if it doesn't exist
+            if (!document.querySelector('.user-menu')) {
+                const userMenu = this.createUserMenu();
+                navMenu.appendChild(userMenu);
+            } else {
+                // Update existing user menu
+                const userAvatar = document.querySelector('.user-avatar img');
+                const userName = document.querySelector('.user-name');
+                if (userAvatar) userAvatar.src = this.currentUser.avatar;
+                if (userName) userName.textContent = this.currentUser.name;
+            }
         } else {
-            // User is logged out
-            authButton.innerHTML = 'Sign In';
+            // User is not logged in
+            authButton.style.display = 'block';
+            authButton.textContent = 'Sign In';
             authButton.onclick = () => openModal('loginModal');
             
-            // Remove user menu if exists
-            const existingMenu = document.querySelector('.user-dropdown');
-            if (existingMenu) existingMenu.remove();
+            // Remove user menu if it exists
+            const userMenu = document.querySelector('.user-menu');
+            if (userMenu) {
+                userMenu.remove();
+            }
         }
     }
 
-    // Create user menu dropdown
+    // Create user menu element
     static createUserMenu() {
-        const existingMenu = document.querySelector('.user-dropdown');
-        if (existingMenu) existingMenu.remove();
-
-        const navMenu = document.querySelector('.nav-menu');
-        const dropdown = document.createElement('div');
-        dropdown.className = 'user-dropdown';
-        dropdown.innerHTML = `
-            <div class="dropdown-header">
+        const userMenu = document.createElement('div');
+        userMenu.className = 'user-menu';
+        userMenu.innerHTML = `
+            <div class="user-avatar">
                 <img src="${this.currentUser.avatar}" alt="${this.currentUser.name}">
-                <div>
-                    <h4>${this.currentUser.name}</h4>
-                    <p>${this.currentUser.email}</p>
-                </div>
             </div>
-            <div class="dropdown-menu">
-                <a href="#" onclick="UserAuth.openProfile()">
-                    <i class="fas fa-user"></i> My Profile
-                </a>
-                <a href="#" onclick="UserAuth.openPledges()">
-                    <i class="fas fa-heart"></i> My Pledges
-                </a>
-                ${this.currentUser.isCreator ? `
-                    <a href="#" onclick="UserAuth.openCreatorDashboard()">
-                        <i class="fas fa-cog"></i> Creator Dashboard
+            <div class="user-dropdown">
+                <div class="user-info">
+                    <span class="user-name">${this.currentUser.name}</span>
+                    <span class="user-email">${this.currentUser.email}</span>
+                </div>
+                <div class="dropdown-menu">
+                    <a href="#" onclick="UserAuth.openProfile()">
+                        <i class="fas fa-user"></i> Profile
                     </a>
-                ` : `
-                    <a href="#" onclick="UserAuth.openBecomeCreator()">
-                        <i class="fas fa-star"></i> Become a Creator
+                    <a href="#" onclick="UserAuth.openPledges()">
+                        <i class="fas fa-heart"></i> My Pledges
                     </a>
-                `}
-                <div class="dropdown-divider"></div>
-                <a href="#" onclick="UserAuth.logout()">
-                    <i class="fas fa-sign-out-alt"></i> Sign Out
-                </a>
+                    ${!this.currentUser.isCreator ? `
+                        <a href="#" onclick="UserAuth.openBecomeCreator()">
+                            <i class="fas fa-star"></i> Become Creator
+                        </a>
+                    ` : `
+                        <a href="#" onclick="UserAuth.openCreatorDashboard()">
+                            <i class="fas fa-cog"></i> Creator Dashboard
+                        </a>
+                    `}
+                    <a href="#" onclick="UserAuth.logout()">
+                        <i class="fas fa-sign-out-alt"></i> Sign Out
+                    </a>
+                </div>
             </div>
         `;
 
-        navMenu.appendChild(dropdown);
+        // Add click event to toggle dropdown
+        userMenu.addEventListener('click', this.toggleUserMenu);
+        
+        return userMenu;
     }
 
-    // Toggle user menu
-    static toggleUserMenu() {
-        const dropdown = document.querySelector('.user-dropdown');
-        if (dropdown) {
-            dropdown.classList.toggle('active');
-        }
+    // Toggle user dropdown menu
+    static toggleUserMenu(e) {
+        e.stopPropagation();
+        const dropdown = e.currentTarget.querySelector('.user-dropdown');
+        dropdown.classList.toggle('active');
     }
 
     // Open profile modal
@@ -294,8 +294,9 @@ class UserAuth {
     }
 
     // Open pledges modal
-    static openPledges() {
-        this.createPledgesModal();
+    static async openPledges() {
+        const pledges = await this.getPledges();
+        this.createPledgesModal(pledges);
         openModal('pledgesModal');
     }
 
@@ -307,96 +308,52 @@ class UserAuth {
 
     // Open creator dashboard
     static openCreatorDashboard() {
-        if (!this.currentUser.isCreator) return;
-        
-        // Find the artist data for current user
-        const artist = artists.find(a => a.name === this.currentUser.name);
-        if (artist) {
-            CreatorDashboard.openDashboard(artist.id);
-        } else {
-            // Create new artist entry for the user
-            const newArtist = {
-                id: Date.now(),
-                name: this.currentUser.name,
-                category: this.currentUser.creatorProfile?.category || 'visual',
-                title: this.currentUser.creatorProfile?.title || 'My Creative Project',
-                description: this.currentUser.creatorProfile?.description || 'Support my creative journey!',
-                image: this.currentUser.creatorProfile?.image || this.currentUser.avatar,
-                profileImage: this.currentUser.avatar,
-                pledged: 0,
-                goal: this.currentUser.creatorProfile?.goal || 1000,
-                supporters: 0,
-                daysLeft: 30,
-                monthlyPledges: 0,
-                pledgeLevels: this.currentUser.creatorProfile?.pledgeLevels || []
-            };
-            
-            artists.unshift(newArtist);
-            CreatorDashboard.openDashboard(newArtist.id);
-        }
+        // This would open the creator dashboard
+        console.log('Opening creator dashboard...');
     }
 
     // Create profile modal
     static createProfileModal() {
-        if (!this.currentUser) return;
+        if (document.getElementById('profileModal')) return;
 
-        const modal = document.getElementById('profileModal') || this.createModal('profileModal', 'My Profile');
-        const content = modal.querySelector('.modal-content');
-        
-        content.innerHTML = `
-            <div class="profile-form">
-                <div class="profile-avatar">
-                    <img src="${this.currentUser.avatar}" alt="${this.currentUser.name}">
-                    <button class="btn-secondary btn-small">Change Avatar</button>
-                </div>
-                
-                <form id="profileForm">
+        const modal = document.createElement('div');
+        modal.id = 'profileModal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <span class="close" onclick="closeModal('profileModal')">&times;</span>
+                <h2>Edit Profile</h2>
+                <form id="profileForm" class="auth-form">
                     <div class="form-group">
                         <label for="profileName">Full Name</label>
                         <input type="text" id="profileName" value="${this.currentUser.name}" required>
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="profileEmail">Email</label>
-                        <input type="email" id="profileEmail" value="${this.currentUser.email}" readonly>
-                    </div>
-                    
                     <div class="form-group">
                         <label for="profileBio">Bio</label>
                         <textarea id="profileBio" rows="3">${this.currentUser.bio || ''}</textarea>
                     </div>
-                    
                     <div class="form-group">
                         <label for="profileWebsite">Website</label>
                         <input type="url" id="profileWebsite" value="${this.currentUser.website || ''}">
                     </div>
-                    
-                    <div class="social-links">
-                        <h4>Social Links</h4>
-                        <div class="form-group">
-                            <label for="profileTwitter">Twitter</label>
-                            <input type="url" id="profileTwitter" value="${this.currentUser.social?.twitter || ''}">
-                        </div>
-                        <div class="form-group">
-                            <label for="profileInstagram">Instagram</label>
-                            <input type="url" id="profileInstagram" value="${this.currentUser.social?.instagram || ''}">
-                        </div>
-                        <div class="form-group">
-                            <label for="profileYoutube">YouTube</label>
-                            <input type="url" id="profileYoutube" value="${this.currentUser.social?.youtube || ''}">
-                        </div>
+                    <div class="form-group">
+                        <label>Social Media</label>
+                        <input type="text" id="profileTwitter" placeholder="Twitter" value="${this.currentUser.social_twitter || ''}">
+                        <input type="text" id="profileInstagram" placeholder="Instagram" value="${this.currentUser.social_instagram || ''}">
+                        <input type="text" id="profileYoutube" placeholder="YouTube" value="${this.currentUser.social_youtube || ''}">
                     </div>
-                    
-                    <button type="submit" class="btn-primary">Save Changes</button>
+                    <button type="submit" class="btn-primary">Update Profile</button>
                 </form>
             </div>
         `;
 
-        // Handle profile form submission
-        const form = content.querySelector('#profileForm');
-        form.onsubmit = (e) => {
+        document.body.appendChild(modal);
+
+        // Handle form submission
+        document.getElementById('profileForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            this.updateProfile({
+            
+            const formData = {
                 name: document.getElementById('profileName').value,
                 bio: document.getElementById('profileBio').value,
                 website: document.getElementById('profileWebsite').value,
@@ -405,170 +362,151 @@ class UserAuth {
                     instagram: document.getElementById('profileInstagram').value,
                     youtube: document.getElementById('profileYoutube').value
                 }
-            });
-            closeModal('profileModal');
-            showSuccessMessage('Profile updated successfully!');
-        };
+            };
+
+            const success = await this.updateProfile(formData);
+            if (success) {
+                closeModal('profileModal');
+                showSuccessMessage('Profile updated successfully!');
+            } else {
+                showErrorMessage('Failed to update profile');
+            }
+        });
     }
 
     // Create pledges modal
-    static createPledgesModal() {
-        if (!this.currentUser) return;
+    static createPledgesModal(pledges) {
+        if (document.getElementById('pledgesModal')) {
+            document.getElementById('pledgesModal').remove();
+        }
 
-        const modal = document.getElementById('pledgesModal') || this.createModal('pledgesModal', 'My Pledges');
-        const content = modal.querySelector('.modal-content');
-        
-        const pledges = this.currentUser.pledges || [];
-        
-        content.innerHTML = `
-            <div class="pledges-content">
-                ${pledges.length === 0 ? `
-                    <div class="empty-state">
-                        <i class="fas fa-heart"></i>
-                        <h3>No pledges yet</h3>
-                        <p>Start supporting creators to see your pledges here!</p>
-                        <button class="btn-primary" onclick="closeModal('pledgesModal'); scrollToSection('artists')">
-                            Discover Artists
-                        </button>
-                    </div>
-                ` : `
-                    <div class="pledges-list">
-                        ${pledges.map(pledge => `
+        const modal = document.createElement('div');
+        modal.id = 'pledgesModal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <span class="close" onclick="closeModal('pledgesModal')">&times;</span>
+                <h2>My Pledges</h2>
+                <div class="pledges-list">
+                    ${pledges.length === 0 ? '<p>No pledges yet. Start supporting artists!</p>' : 
+                        pledges.map(pledge => `
                             <div class="pledge-item">
+                                <img src="${pledge.artist_image}" alt="${pledge.artist_name}" class="pledge-artist-image">
                                 <div class="pledge-info">
-                                    <h4>${pledge.artistName}</h4>
-                                    <p class="pledge-level">${pledge.levelName}</p>
-                                    <p class="pledge-amount">$${pledge.amount}/month</p>
-                                    <p class="pledge-date">Since ${new Date(pledge.date).toLocaleDateString()}</p>
+                                    <h4>${pledge.artist_name}</h4>
+                                    <p>${pledge.level_name} - $${pledge.amount}</p>
+                                    <small>Pledged on ${new Date(pledge.created_at).toLocaleDateString()}</small>
                                 </div>
-                                <div class="pledge-actions">
-                                    <button class="btn-secondary btn-small" onclick="UserAuth.cancelPledge('${pledge.id}')">
-                                        Cancel
-                                    </button>
-                                </div>
+                                <button class="btn-cancel" onclick="UserAuth.cancelPledge(${pledge.id})">
+                                    Cancel
+                                </button>
                             </div>
-                        `).join('')}
-                    </div>
-                `}
+                        `).join('')
+                    }
+                </div>
             </div>
         `;
+
+        document.body.appendChild(modal);
     }
 
     // Create become creator modal
     static createBecomeCreatorModal() {
-        if (!this.currentUser) return;
+        if (document.getElementById('becomeCreatorModal')) return;
 
-        const modal = document.getElementById('becomeCreatorModal') || this.createModal('becomeCreatorModal', 'Become a Creator');
-        const content = modal.querySelector('.modal-content');
-        
-        content.innerHTML = `
-            <div class="creator-form">
-                <div class="creator-intro">
-                    <h3>Share Your Creativity</h3>
-                    <p>Start your creator journey and connect with supporters who believe in your vision.</p>
-                </div>
-                
-                <form id="creatorForm">
+        const modal = document.createElement('div');
+        modal.id = 'becomeCreatorModal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <span class="close" onclick="closeModal('becomeCreatorModal')">&times;</span>
+                <h2>Become a Creator</h2>
+                <form id="becomeCreatorForm" class="auth-form">
+                    <div class="form-group">
+                        <label for="creatorName">Artist/Creator Name</label>
+                        <input type="text" id="creatorName" required>
+                    </div>
                     <div class="form-group">
                         <label for="creatorTitle">Project Title</label>
-                        <input type="text" id="creatorTitle" placeholder="e.g., My Digital Art Collection" required>
+                        <input type="text" id="creatorTitle" required>
                     </div>
-                    
                     <div class="form-group">
                         <label for="creatorCategory">Category</label>
                         <select id="creatorCategory" required>
-                            <option value="">Select a category</option>
-                            <option value="visual">Visual Arts</option>
+                            <option value="">Select Category</option>
                             <option value="music">Music</option>
+                            <option value="visual">Visual Arts</option>
                             <option value="writing">Writing</option>
-                            <option value="film">Film & Video</option>
-                            <option value="photography">Photography</option>
-                            <option value="crafts">Crafts & DIY</option>
+                            <option value="film">Film</option>
                         </select>
                     </div>
-                    
                     <div class="form-group">
                         <label for="creatorDescription">Project Description</label>
-                        <textarea id="creatorDescription" rows="4" placeholder="Tell supporters about your creative project..." required></textarea>
+                        <textarea id="creatorDescription" rows="4" required></textarea>
                     </div>
-                    
                     <div class="form-group">
-                        <label for="creatorGoal">Monthly Goal ($)</label>
-                        <input type="number" id="creatorGoal" min="1" value="100" required>
+                        <label for="creatorGoal">Funding Goal ($)</label>
+                        <input type="number" id="creatorGoal" min="1" required>
                     </div>
-                    
                     <div class="form-group">
                         <label for="creatorImage">Project Image URL</label>
                         <input type="url" id="creatorImage" placeholder="https://example.com/image.jpg">
                     </div>
-                    
-                    <button type="submit" class="btn-primary">Create Creator Profile</button>
+                    <button type="submit" class="btn-primary">Create Project</button>
                 </form>
             </div>
         `;
 
-        // Handle creator form submission
-        const form = content.querySelector('#creatorForm');
-        form.onsubmit = (e) => {
+        document.body.appendChild(modal);
+
+        // Handle form submission
+        document.getElementById('becomeCreatorForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const creatorData = {
+            const formData = {
+                name: document.getElementById('creatorName').value,
                 title: document.getElementById('creatorTitle').value,
                 category: document.getElementById('creatorCategory').value,
                 description: document.getElementById('creatorDescription').value,
-                goal: parseInt(document.getElementById('creatorGoal').value),
-                image: document.getElementById('creatorImage').value || this.currentUser.avatar,
-                pledgeLevels: [
-                    {
-                        id: 1,
-                        name: "Supporter",
-                        amount: 5,
-                        description: "Basic support level",
-                        benefits: ["Monthly updates", "Early access"],
-                        supporters: 0
-                    },
-                    {
-                        id: 2,
-                        name: "Fan",
-                        amount: 15,
-                        description: "Enhanced support level",
-                        benefits: ["Exclusive content", "Behind-the-scenes"],
-                        supporters: 0
-                    }
-                ]
+                goal: parseFloat(document.getElementById('creatorGoal').value),
+                image: document.getElementById('creatorImage').value || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=300&fit=crop'
             };
-            
-            this.becomeCreator(creatorData);
-            closeModal('becomeCreatorModal');
-            showSuccessMessage('Creator profile created successfully!');
-            this.updateUI();
-        };
-    }
 
-    // Create modal helper
-    static createModal(id, title) {
-        const modal = document.createElement('div');
-        modal.id = id;
-        modal.className = 'modal';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <span class="close" onclick="closeModal('${id}')">&times;</span>
-                <h2>${title}</h2>
-                <div class="modal-body"></div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        return modal;
+            const success = await this.becomeCreator(formData);
+            if (success) {
+                closeModal('becomeCreatorModal');
+                showSuccessMessage('Creator profile created successfully!');
+                // Refresh the page to show the new creator profile
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showErrorMessage('Failed to create creator profile');
+            }
+        });
     }
 
     // Cancel pledge
-    static cancelPledge(pledgeId) {
-        if (!this.currentUser) return;
-        
-        this.currentUser.pledges = this.currentUser.pledges.filter(p => p.id !== pledgeId);
-        this.updateUser();
-        this.createPledgesModal(); // Refresh the modal
-        showSuccessMessage('Pledge cancelled successfully!');
+    static async cancelPledge(pledgeId) {
+        if (!confirm('Are you sure you want to cancel this pledge?')) return;
+
+        try {
+            const response = await fetch(`/api/pledges/${pledgeId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${this.token}`
+                }
+            });
+
+            if (response.ok) {
+                showSuccessMessage('Pledge cancelled successfully');
+                // Refresh pledges modal
+                this.openPledges();
+            } else {
+                showErrorMessage('Failed to cancel pledge');
+            }
+        } catch (error) {
+            console.error('Failed to cancel pledge:', error);
+            showErrorMessage('Failed to cancel pledge');
+        }
     }
 }
 
@@ -1000,26 +938,40 @@ const navToggle = document.querySelector('.nav-toggle');
 const navMenu = document.querySelector('.nav-menu');
 
 // Initialize the app
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     loadArtists();
     setupEventListeners();
     setupSmoothScrolling();
     setupMobileMenu();
-    UserAuth.init(); // Initialize user authentication
+    await UserAuth.init(); // Initialize user authentication
 });
 
 // Load artists into the grid
-function loadArtists(category = 'all') {
-    const filteredArtists = category === 'all' 
-        ? artists 
-        : artists.filter(artist => artist.category === category);
-    
-    artistsGrid.innerHTML = '';
-    
-    filteredArtists.forEach(artist => {
-        const artistCard = createArtistCard(artist);
-        artistsGrid.appendChild(artistCard);
-    });
+async function loadArtists(category = 'all') {
+    try {
+        const response = await fetch(`/api/artists?category=${category}`);
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to load artists');
+        }
+
+        const artists = data.artists || [];
+        artistsGrid.innerHTML = '';
+        
+        if (artists.length === 0) {
+            artistsGrid.innerHTML = '<div class="no-artists"><p>No artists found in this category.</p></div>';
+            return;
+        }
+        
+        artists.forEach(artist => {
+            const artistCard = createArtistCard(artist);
+            artistsGrid.appendChild(artistCard);
+        });
+    } catch (error) {
+        console.error('Failed to load artists:', error);
+        artistsGrid.innerHTML = '<div class="no-artists"><p>Failed to load artists. Please try again.</p></div>';
+    }
 }
 
 // Create artist card element
@@ -1032,17 +984,17 @@ function createArtistCard(artist) {
     card.onclick = () => openArtistModal(artist);
     
     card.innerHTML = `
-        <img src="${artist.image}" alt="${artist.name}" class="artist-image">
+        <img src="${artist.image || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=300&fit=crop'}" alt="${artist.name}" class="artist-image">
         <div class="artist-info">
             <span class="artist-category">${getCategoryName(artist.category)}</span>
             <h3>${artist.name}</h3>
             <p>${artist.title}</p>
             <div class="artist-progress">
-                <p>$${artist.pledged.toLocaleString()} of $${artist.goal.toLocaleString()}</p>
+                <p>$${(artist.pledged || 0).toLocaleString()} of $${artist.goal.toLocaleString()}</p>
                 <div class="progress-bar">
                     <div class="progress" style="width: ${Math.min(progress, 100)}%"></div>
                 </div>
-                <p>${artist.supporters} supporters • ${artist.daysLeft} days left</p>
+                <p>${artist.supporters || 0} supporters • ${artist.days_left || 30} days left</p>
             </div>
             <div class="artist-actions">
                 <button class="btn-pledge" onclick="event.stopPropagation(); openPledgeModal(${artist.id})">
