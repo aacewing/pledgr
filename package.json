@@ -8,8 +8,7 @@
     "dev": "nodemon server.js",
     "build": "echo 'Static site - no build required'",
     "deploy": "echo 'Ready for deployment'",
-    "vercel-build": "echo 'Vercel build complete'",
-    "frontend": "npx http-server -p 8000 -o"
+    "vercel-build": "echo 'Vercel build complete'"
   },
   "keywords": [
     "artists",
@@ -35,7 +34,6 @@
     "helmet": "^7.1.0"
   },
   "devDependencies": {
-    "http-server": "^14.1.1",
     "live-server": "^1.2.2",
     "nodemon": "^3.0.1"
   }
