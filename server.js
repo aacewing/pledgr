@@ -16,6 +16,9 @@ const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'producti
     (() => { throw new Error('JWT_SECRET must be set in production') })() : 
     'dev-secret-key-change-this-in-production');
 
+// Trust proxy for rate limiting (needed on Render)
+app.set('trust proxy', 1);
+
 // Middleware
 const corsOptions = {
     origin: process.env.NODE_ENV === 'production' 
