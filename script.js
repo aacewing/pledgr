@@ -145,7 +145,10 @@ class UserAuth {
         if (!this.currentUser) return false;
 
         try {
-            const response = await fetch('/api/auth/profile', {
+            const apiUrl = window.location.hostname === 'pledgr.art' 
+            ? 'https://pledgr.onrender.com/api/auth/profile'
+            : '/api/auth/profile';
+        const response = await fetch(apiUrl, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -174,7 +177,10 @@ class UserAuth {
         if (!this.currentUser) return false;
 
         try {
-            const response = await fetch('/api/artists', {
+            const apiUrl = window.location.hostname === 'pledgr.art' 
+            ? 'https://pledgr.onrender.com/api/artists'
+            : '/api/artists';
+        const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -203,7 +209,10 @@ class UserAuth {
         if (!this.currentUser) return false;
 
         try {
-            const response = await fetch('/api/pledges', {
+            const apiUrl = window.location.hostname === 'pledgr.art' 
+                ? 'https://pledgr.onrender.com/api/pledges'
+                : '/api/pledges';
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -230,7 +239,10 @@ class UserAuth {
         if (!this.currentUser) return [];
 
         try {
-            const response = await fetch('/api/pledges', {
+            const apiUrl = window.location.hostname === 'pledgr.art' 
+                ? 'https://pledgr.onrender.com/api/pledges'
+                : '/api/pledges';
+            const response = await fetch(apiUrl, {
                 headers: {
                     'Authorization': `Bearer ${this.token}`
                 }
@@ -1154,7 +1166,7 @@ const FALLBACK_ARTISTS = [
 // Load artists into the grid
 async function loadArtists(category = 'all') {
     try {
-        // Use your live backend URL
+        // Always use the live backend URL for pledgr.art
         const apiUrl = window.location.hostname === 'pledgr.art' 
             ? `https://pledgr.onrender.com/api/artists?category=${category}`
             : `/api/artists?category=${category}`;
