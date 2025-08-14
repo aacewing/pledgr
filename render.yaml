@@ -14,6 +14,6 @@ services:
       - key: DATABASE_TYPE
         value: postgres
       - key: DATABASE_URL
-        value: postgresql://postgres:Vh2YFElrECrLGStL@db.pledgr.supabase.co:5432/postgres
+        value: postgresql://postgres:Vh2YFElrECrLGStL@db.qpquxnysighzkswwmerh.supabase.co:5432/postgres
       - key: JWT_SECRET
         value: pledgr-jwt-secret-2024-super-secure-key-change-this-later 
