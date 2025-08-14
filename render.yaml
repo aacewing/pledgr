@@ -2,10 +2,18 @@ services:
   - type: web
     name: pledgr-production
     env: node
+    nodeVersion: 18
     buildCommand: npm install
     startCommand: npm start
+    rootDir: ./
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 3000 
+        value: 3000
+      - key: DATABASE_TYPE
+        value: postgres
+      - key: DATABASE_URL
+        value: postgresql://postgres:Vh2YFElrECrLGStL@db.pledgr.supabase.co:5432/postgres
+      - key: JWT_SECRET
+        value: pledgr-jwt-secret-2024-super-secure-key-change-this-later 
