@@ -28,8 +28,22 @@ const corsOptions = {
     optionsSuccessStatus: 200
 };
 
-// Security middleware
-app.use(helmet());
+// Security middleware with custom CSP
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            imgSrc: ["'self'", "data:", "https:", "https://images.unsplash.com"],
+            connectSrc: ["'self'", "https://pledgr.onrender.com"],
+            frameSrc: ["'self'"],
+            objectSrc: ["'none'"],
+            upgradeInsecureRequests: []
+        }
+    }
+}));
 
 // Rate limiting
 const limiter = rateLimit({
