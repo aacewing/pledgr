@@ -379,4 +379,6 @@ app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🗄️ Database: ${process.env.DATABASE_TYPE || 'sqlite'}`);
+    console.log(`🔍 DATABASE_URL: ${process.env.DATABASE_URL ? 'Set' : 'Not set'}`);
+    console.log(`🔍 DATABASE_TYPE: ${process.env.DATABASE_TYPE || 'Not set'}`);
 });
