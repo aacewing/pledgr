@@ -1,4 +1,18 @@
 // User Authentication System
+console.log('🚀 Pledgr script loading...');
+
+// Test modal function
+window.testModal = function() {
+    console.log('Testing modal function...');
+    const modal = document.getElementById('signupModal');
+    if (modal) {
+        console.log('Modal found, opening...');
+        modal.style.display = 'block';
+    } else {
+        console.log('Modal not found!');
+    }
+};
+
 class UserAuth {
     static currentUser = null;
     static token = localStorage.getItem('pledgr_token');
@@ -1331,9 +1345,15 @@ async function handleFormSubmit(e) {
 
 // Modal functions
 function openModal(modalId) {
+    console.log('🔍 openModal called with:', modalId);
     const modal = document.getElementById(modalId);
-    modal.style.display = 'block';
-    document.body.style.overflow = 'hidden';
+    if (modal) {
+        console.log('✅ Modal found, opening...');
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    } else {
+        console.error('❌ Modal not found:', modalId);
+    }
 }
 
 function closeModal(modalId) {
