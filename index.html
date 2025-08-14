@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pledgr - Support Artists</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-container">
+                <div class="nav-logo">
+                    <i class="fas fa-heart"></i>
+                    <span>Pledgr</span>
+                </div>
+                <div class="nav-menu">
+                    <a href="#home" class="nav-link active">Home</a>
+                    <a href="#artists" class="nav-link">Artists</a>
+                    <a href="#about" class="nav-link">About</a>
+                    <button class="btn-primary" onclick="openModal('loginModal')">Sign In</button>
+                </div>
+                <div class="nav-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Hero Section -->
+        <section id="home" class="hero">
+            <div class="hero-content">
+                <h1>Support Artists, <span class="gradient-text">Fuel Creativity</span></h1>
+                <p>Join Pledgr and help artists bring their visions to life. Every pledge makes a difference.</p>
+                <div class="hero-buttons">
+                    <button class="btn-primary btn-large" onclick="openModal('signupModal')">
+                        <i class="fas fa-rocket"></i>
+                        Get Started
+                    </button>
+                    <button class="btn-secondary btn-large" onclick="scrollToSection('artists')">
+                        <i class="fas fa-search"></i>
+                        Discover Artists
+                    </button>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="floating-card">
+                    <div class="card-artist">
+                        <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face" alt="Artist">
+                        <div class="card-info">
+                            <h4>Sarah Chen</h4>
+                            <p>Digital Artist</p>
+                            <div class="progress-bar">
+                                <div class="progress" style="width: 75%"></div>
+                            </div>
+                            <p class="pledge-amount">$2,450 of $3,000</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Artists Section -->
+        <section id="artists" class="artists-section">
+            <div class="container">
+                <h2>Featured Artists</h2>
+                <div class="filters">
+                    <button class="filter-btn active" data-category="all">All</button>
+                    <button class="filter-btn" data-category="music">Music</button>
+                    <button class="filter-btn" data-category="visual">Visual Arts</button>
+                    <button class="filter-btn" data-category="writing">Writing</button>
+                    <button class="filter-btn" data-category="film">Film</button>
+                </div>
+                <div class="artists-grid" id="artistsGrid">
+                    <div class="loading">Loading artists...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- How It Works -->
+        <section class="how-it-works">
+            <div class="container">
+                <h2>How Pledgr Works</h2>
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-icon">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <h3>Discover</h3>
+                        <p>Browse amazing artists and their creative projects</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-icon">
+                            <i class="fas fa-heart"></i>
+                        </div>
+                        <h3>Support</h3>
+                        <p>Choose your pledge amount and support creators</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-icon">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <h3>Rewards</h3>
+                        <p>Get exclusive rewards and updates from artists</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="about" class="about-section">
+            <div class="container">
+                <div class="about-content">
+                    <h2>About Pledgr</h2>
+                    <p>Pledgr is a platform dedicated to connecting artists with their supporters. We believe that every creator deserves the opportunity to bring their vision to life, and every supporter deserves to be part of that journey.</p>
+                    <div class="stats">
+                        <div class="stat">
+                            <h3>1,247</h3>
+                            <p>Artists Supported</p>
+                        </div>
+                        <div class="stat">
+                            <h3>$2.3M</h3>
+                            <p>Total Pledges</p>
+                        </div>
+                        <div class="stat">
+                            <h3>45,892</h3>
+                            <p>Supporters</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="container">
+                <div class="footer-content">
+                    <div class="footer-section">
+                        <h4>Pledgr</h4>
+                        <p>Supporting artists, one pledge at a time.</p>
+                        <div class="social-links">
+                            <a href="#"><i class="fab fa-twitter"></i></a>
+                            <a href="#"><i class="fab fa-instagram"></i></a>
+                            <a href="#"><i class="fab fa-facebook"></i></a>
+                        </div>
+                    </div>
+                    <div class="footer-section">
+                        <h4>For Artists</h4>
+                        <ul>
+                            <li><a href="#">Start a Project</a></li>
+                            <li><a href="#">Success Stories</a></li>
+                            <li><a href="#">Resources</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-section">
+                        <h4>For Supporters</h4>
+                        <ul>
+                            <li><a href="#">Discover Projects</a></li>
+                            <li><a href="#">How It Works</a></li>
+                            <li><a href="#">Support Guidelines</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-section">
+                        <h4>Company</h4>
+                        <ul>
+                            <li><a href="#">About Us</a></li>
+                            <li><a href="#">Contact</a></li>
+                            <li><a href="#">Privacy Policy</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="footer-bottom">
+                    <p>&copy; 2024 Pledgr. All rights reserved.</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modals -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('loginModal')">&times;</span>
+            <h2>Sign In</h2>
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <button type="submit" class="btn-primary">Sign In</button>
+            </form>
+            <p class="auth-switch">Don't have an account? <a href="#" onclick="switchModal('loginModal', 'signupModal')">Sign Up</a></p>
+        </div>
+    </div>
+
+    <div id="signupModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('signupModal')">&times;</span>
+            <h2>Create Account</h2>
+            <form id="signupForm" class="auth-form">
+                <div class="form-group">
+                    <label for="signupName">Full Name</label>
+                    <input type="text" id="signupName" required>
+                </div>
+                <div class="form-group">
+                    <label for="signupEmail">Email</label>
+                    <input type="email" id="signupEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="signupPassword">Password</label>
+                    <input type="password" id="signupPassword" required>
+                </div>
+                <button type="submit" class="btn-primary">Create Account</button>
+            </form>
+            <p class="auth-switch">Already have an account? <a href="#" onclick="switchModal('signupModal', 'loginModal')">Sign In</a></p>
+        </div>
+    </div>
+
+    <div id="artistModal" class="modal">
+        <div class="modal-content large">
+            <span class="close" onclick="closeModal('artistModal')">&times;</span>
+            <div id="artistModalContent">
+                <!-- Artist details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="paypal-integration.js"></script>
+    <script src="script.js"></script>
+</body>
+</html> 

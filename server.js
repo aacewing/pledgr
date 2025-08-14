@@ -52,7 +52,7 @@ app.use('/api/auth/', authLimiter);
 
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
-app.use(express.static('public'));
+app.use(express.static('.'));
 
 // Database setup
 const db = new Database();
@@ -88,15 +88,15 @@ const authenticateToken = (req, res, next) => {
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { name, email, password } = req.body;
-
+        
         if (!name || !email || !password) {
             return res.status(400).json({ error: 'All fields are required' });
         }
-
+        
         if (password.length < 6) {
             return res.status(400).json({ error: 'Password must be at least 6 characters' });
         }
-
+        
         // Check if user already exists
         const existingUser = await db.get('SELECT id FROM users WHERE email = ?', [email]);
         
@@ -136,11 +136,11 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
-
+        
         if (!email || !password) {
             return res.status(400).json({ error: 'Email and password are required' });
         }
-
+        
         const user = await db.get('SELECT * FROM users WHERE email = ?', [email]);
         
         if (!user) {
@@ -192,7 +192,7 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 app.put('/api/auth/profile', authenticateToken, async (req, res) => {
     try {
         const { name, bio, website, social } = req.body;
-
+        
         await db.run(
             'UPDATE users SET name = ?, bio = ?, website = ?, social_twitter = ?, social_instagram = ?, social_youtube = ? WHERE id = ?',
             [name, bio, website, social?.twitter || '', social?.instagram || '', social?.youtube || '', req.user.userId]
@@ -218,7 +218,7 @@ app.get('/api/artists', async (req, res) => {
             LEFT JOIN users u ON a.user_id = u.id
             LEFT JOIN pledges p ON a.id = p.artist_id AND p.status = 'active'
         `;
-
+        
         if (category && category !== 'all') {
             query += ' WHERE a.category = ?';
             query += ' GROUP BY a.id';
@@ -239,11 +239,11 @@ app.get('/api/artists', async (req, res) => {
 app.post('/api/artists', authenticateToken, async (req, res) => {
     try {
         const { name, title, description, category, image, goal } = req.body;
-
+        
         if (!name || !title || !description || !category) {
             return res.status(400).json({ error: 'All fields are required' });
         }
-
+        
         const result = await db.run(
             'INSERT INTO artists (user_id, name, title, description, category, image, goal) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [req.user.userId, name, title, description, category, image, goal || 0]
@@ -291,11 +291,11 @@ app.get('/api/artists/:id', async (req, res) => {
 app.post('/api/pledges', authenticateToken, async (req, res) => {
     try {
         const { artistId, amount, levelId } = req.body;
-
+        
         if (!artistId || !amount) {
             return res.status(400).json({ error: 'Artist ID and amount are required' });
         }
-
+        
         const result = await db.run(
             'INSERT INTO pledges (user_id, artist_id, level_id, amount) VALUES (?, ?, ?, ?)',
             [req.user.userId, artistId, levelId || null, amount]
@@ -335,6 +335,27 @@ app.get('/api/pledges', authenticateToken, async (req, res) => {
     }
 });
 
+// Cancel pledge
+app.delete('/api/pledges/:id', authenticateToken, async (req, res) => {
+    try {
+        const pledgeId = req.params.id;
+
+        const result = await db.run(
+            'UPDATE pledges SET status = "cancelled" WHERE id = ? AND user_id = ?',
+            [pledgeId, req.user.userId]
+        );
+
+        if (result.changes === 0) {
+            return res.status(404).json({ error: 'Pledge not found or not authorized' });
+        }
+
+        res.json({ message: 'Pledge cancelled successfully' });
+    } catch (error) {
+        console.error('Cancel pledge error:', error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     res.json({ 
@@ -343,6 +364,11 @@ app.get('/api/health', (req, res) => {
         database: db.type,
         environment: process.env.NODE_ENV || 'development'
     });
+});
+
+// Catch-all for SPA routing
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Start server

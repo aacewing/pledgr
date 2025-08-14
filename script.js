@@ -7,7 +7,11 @@ class UserAuth {
     static async init() {
         if (this.token) {
             try {
-                const response = await fetch('/api/auth/me', {
+                const apiUrl = window.location.hostname === 'pledgr.art' 
+                    ? 'https://pledgr-production.onrender.com/api/auth/me'
+                    : '/api/auth/me';
+                
+                const response = await fetch(apiUrl, {
                     headers: {
                         'Authorization': `Bearer ${this.token}`
                     }
@@ -39,7 +43,11 @@ class UserAuth {
     // Register new user
     static async register(userData) {
         try {
-            const response = await fetch('/api/auth/register', {
+            const apiUrl = window.location.hostname === 'pledgr.art' 
+                ? 'https://pledgr-production.onrender.com/api/auth/register'
+                : '/api/auth/register';
+            
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -81,7 +89,11 @@ class UserAuth {
     // Login user
     static async login(email, password) {
         try {
-            const response = await fetch('/api/auth/login', {
+            const apiUrl = window.location.hostname === 'pledgr.art' 
+                ? 'https://pledgr-production.onrender.com/api/auth/login'
+                : '/api/auth/login';
+            
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -1142,8 +1154,12 @@ const FALLBACK_ARTISTS = [
 // Load artists into the grid
 async function loadArtists(category = 'all') {
     try {
-        // Try to fetch from backend first
-        const response = await fetch(`/api/artists?category=${category}`);
+        // Use your live backend URL
+        const apiUrl = window.location.hostname === 'pledgr.art' 
+            ? `https://pledgr-production.onrender.com/api/artists?category=${category}`
+            : `/api/artists?category=${category}`;
+        
+        const response = await fetch(apiUrl);
         const data = await response.json();
         
         if (response.ok && data.artists && data.artists.length > 0) {
