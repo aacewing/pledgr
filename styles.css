@@ -1305,6 +1305,7 @@ body {
     }
 } 
 
+<<<<<<< Updated upstream
 /* User Authentication Styles */
 .user-menu {
     display: flex;
@@ -1325,6 +1326,31 @@ body {
     height: 32px;
     border-radius: 50%;
     object-fit: cover;
+=======
+/* User Menu Styles */
+.user-menu {
+    position: relative;
+    display: inline-block;
+}
+
+.user-menu-btn {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.user-menu-btn:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+>>>>>>> Stashed changes
 }
 
 .user-dropdown {
@@ -1332,23 +1358,38 @@ body {
     top: 100%;
     right: 0;
     background: white;
+<<<<<<< Updated upstream
     border-radius: 12px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
     min-width: 280px;
     z-index: 1001;
+=======
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    min-width: 200px;
+    z-index: 1000;
+>>>>>>> Stashed changes
     opacity: 0;
     visibility: hidden;
     transform: translateY(-10px);
     transition: all 0.3s ease;
+<<<<<<< Updated upstream
     margin-top: 0.5rem;
 }
 
 .user-dropdown.active {
+=======
+}
+
+.user-menu:hover .user-dropdown {
+>>>>>>> Stashed changes
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
 }
 
+<<<<<<< Updated upstream
 .dropdown-header {
     display: flex;
     align-items: center;
@@ -1397,10 +1438,25 @@ body {
 .dropdown-menu a i {
     width: 16px;
     color: #667eea;
+=======
+.user-dropdown a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    color: var(--text-color);
+    text-decoration: none;
+    transition: background-color 0.2s ease;
+}
+
+.user-dropdown a:hover {
+    background-color: var(--bg-light);
+>>>>>>> Stashed changes
 }
 
 .dropdown-divider {
     height: 1px;
+<<<<<<< Updated upstream
     background-color: #f0f0f0;
     margin: 0.5rem 0;
 }
@@ -1653,6 +1709,73 @@ body {
 }
 
 @keyframes slideInRight {
+=======
+    background-color: var(--border-color);
+    margin: 8px 0;
+}
+
+/* Security Features */
+.security-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--success-color);
+    margin-top: 8px;
+}
+
+.security-indicator i {
+    font-size: 10px;
+}
+
+/* Password Strength Indicator */
+.password-strength {
+    margin-top: 8px;
+    font-size: 12px;
+}
+
+.password-strength.weak {
+    color: var(--error-color);
+}
+
+.password-strength.medium {
+    color: var(--warning-color);
+}
+
+.password-strength.strong {
+    color: var(--success-color);
+}
+
+/* Rate Limiting Notice */
+.rate-limit-notice {
+    background: var(--warning-bg);
+    color: var(--warning-color);
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: 12px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Session Timeout Warning */
+.session-warning {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: var(--warning-bg);
+    color: var(--warning-color);
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    z-index: 1001;
+    max-width: 300px;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+>>>>>>> Stashed changes
     from {
         transform: translateX(100%);
         opacity: 0;
@@ -1663,6 +1786,7 @@ body {
     }
 }
 
+<<<<<<< Updated upstream
 /* Payment Form Styles */
 .payment-method {
     max-width: 500px;
@@ -2748,4 +2872,15 @@ body {
         right: -100px;
         min-width: 200px;
     }
+=======
+/* CSS Variables for Security Colors */
+:root {
+    --success-color: #10b981;
+    --error-color: #ef4444;
+    --warning-color: #f59e0b;
+    --warning-bg: #fef3c7;
+    --border-color: #e5e7eb;
+    --bg-light: #f9fafb;
+    --primary-dark: #4f46e5;
+>>>>>>> Stashed changes
 } 

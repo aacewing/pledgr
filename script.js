@@ -762,12 +762,38 @@ const PLATFORM_FEE_PERCENTAGE = 5;
 
 // Payment processing simulation
 class PaymentProcessor {
+<<<<<<< Updated upstream
     static async processPledge(artistId, pledgeLevelId, paymentMethod) {
         // Check if user is logged in
         if (!UserAuth.currentUser) {
             throw new Error('Please sign in to make a pledge');
         }
         
+=======
+    static async processPledge(artistId, pledgeLevelId, userData = {}) {
+        const artist = artists.find(a => a.id === artistId);
+        const pledgeLevel = artist.pledgeLevels.find(p => p.id === pledgeLevelId);
+        
+        if (!artist || !pledgeLevel) {
+            throw new Error('Invalid artist or pledge level');
+        }
+        
+        // Use PayPal processor for real payments
+        if (window.paypalProcessor) {
+            try {
+                const result = await window.paypalProcessor.processPledge(artistId, pledgeLevelId, userData);
+                return result;
+            } catch (error) {
+                throw new Error(`Payment failed: ${error.message}`);
+            }
+        } else {
+            // Fallback to simulation if PayPal is not available
+            return await this.simulatePayment(artistId, pledgeLevelId, userData);
+        }
+    }
+    
+    static async simulatePayment(artistId, pledgeLevelId, userData) {
+>>>>>>> Stashed changes
         const artist = artists.find(a => a.id === artistId);
         const pledgeLevel = artist.pledgeLevels.find(p => p.id === pledgeLevelId);
         
@@ -780,6 +806,7 @@ class PaymentProcessor {
         const platformFee = (pledgeAmount * PLATFORM_FEE_PERCENTAGE) / 100;
         const artistReceives = pledgeAmount - platformFee;
         
+<<<<<<< Updated upstream
         // Use Stripe for real payments
         if (window.StripePaymentProcessor) {
             try {
@@ -835,6 +862,8 @@ class PaymentProcessor {
     }
     
     static async simulatePayment(amount, paymentMethod) {
+=======
+>>>>>>> Stashed changes
         // Simulate API call delay
         await new Promise(resolve => setTimeout(resolve, 1500));
         
@@ -842,10 +871,18 @@ class PaymentProcessor {
         const success = Math.random() > 0.1;
         
         if (success) {
+            // Update artist stats
+            artist.pledged += pledgeAmount;
+            artist.supporters += 1;
+            pledgeLevel.supporters += 1;
+            
             return {
                 success: true,
                 transactionId: 'txn_' + Math.random().toString(36).substr(2, 9),
-                amount: amount
+                amount: pledgeAmount,
+                platformFee: platformFee,
+                artistReceives: artistReceives,
+                message: `Successfully pledged $${pledgeAmount} to ${artist.name}`
             };
         } else {
             return {
@@ -1648,44 +1685,87 @@ function setupEventListeners() {
     });
 }
 
+<<<<<<< Updated upstream
 // Handle form submissions
 async function handleFormSubmit(e) {
     e.preventDefault();
     
     const form = e.target;
     const submitButton = form.querySelector('button[type="submit"]');
+=======
+// Handle form submissions with secure authentication
+async function handleFormSubmit(e) {
+    e.preventDefault();
+    
+    const submitButton = e.target.querySelector('button[type="submit"]');
+>>>>>>> Stashed changes
     const originalText = submitButton.textContent;
     
     submitButton.textContent = 'Processing...';
     submitButton.disabled = true;
     
     try {
+<<<<<<< Updated upstream
         if (form.id === 'loginForm') {
+=======
+        // Determine which form was submitted
+        const isLoginForm = e.target.closest('#loginModal');
+        const isSignupForm = e.target.closest('#signupModal');
+        
+        if (isLoginForm) {
+>>>>>>> Stashed changes
             // Handle login
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
             
+<<<<<<< Updated upstream
             await UserAuth.login(email, password);
             closeModal('loginModal');
             showSuccessMessage('Welcome back!');
             form.reset();
             
         } else if (form.id === 'signupForm') {
+=======
+            await pledgrAuth.login(email, password);
+            
+            showSuccessMessage('Welcome back! You have been successfully signed in.');
+            closeModal('loginModal');
+            
+        } else if (isSignupForm) {
+>>>>>>> Stashed changes
             // Handle registration
             const name = document.getElementById('signupName').value;
             const email = document.getElementById('signupEmail').value;
             const password = document.getElementById('signupPassword').value;
             
+<<<<<<< Updated upstream
             await UserAuth.register({ name, email, password });
             closeModal('signupModal');
             showSuccessMessage('Account created successfully! Welcome to Pledgr!');
             form.reset();
         }
+=======
+            await pledgrAuth.register({ name, email, password });
+            
+            showSuccessMessage('Account created successfully! Welcome to Pledgr.');
+            closeModal('signupModal');
+            
+        } else {
+            // Handle other forms
+            const formData = new FormData(e.target);
+            showSuccessMessage('Thank you! Your submission has been received.');
+        }
+        
+>>>>>>> Stashed changes
     } catch (error) {
         showErrorMessage(error.message);
     } finally {
         submitButton.textContent = originalText;
         submitButton.disabled = false;
+<<<<<<< Updated upstream
+=======
+        e.target.reset();
+>>>>>>> Stashed changes
     }
 }
 
@@ -1858,6 +1938,7 @@ function selectPledgeLevel(artistId, levelId) {
 
 // Setup payment form
 function setupPaymentForm(artistId, levelId) {
+<<<<<<< Updated upstream
     const artist = artists.find(a => a.id === artistId);
     const pledgeLevel = artist.pledgeLevels.find(p => p.id === levelId);
     
@@ -1969,6 +2050,71 @@ function setupPaymentForm(artistId, levelId) {
                 cardElement.mount('#stripe-card-element');
             }
         }
+=======
+    const form = document.getElementById('paymentForm');
+    const paymentContainer = document.getElementById('paymentContainer');
+    
+    // Clear previous content
+    paymentContainer.innerHTML = '';
+    
+    // Create PayPal button container
+    const paypalContainer = document.createElement('div');
+    paypalContainer.id = `paypal-button-${artistId}-${levelId}`;
+    paypalContainer.className = 'paypal-button-container';
+    paymentContainer.appendChild(paypalContainer);
+    
+    // Add payment info
+    const artist = artists.find(a => a.id === artistId);
+    const pledgeLevel = artist.pledgeLevels.find(p => p.id === levelId);
+    
+    const paymentInfo = document.createElement('div');
+    paymentInfo.className = 'payment-info';
+    paymentInfo.innerHTML = `
+        <div class="payment-summary">
+            <h4>Payment Summary</h4>
+            <div class="payment-details">
+                <p><strong>Artist:</strong> ${artist.name}</p>
+                <p><strong>Pledge Level:</strong> ${pledgeLevel.name}</p>
+                <p><strong>Amount:</strong> $${pledgeLevel.amount}</p>
+                <p><strong>Platform Fee (5%):</strong> $${((pledgeLevel.amount * 5) / 100).toFixed(2)}</p>
+                <p><strong>Artist Receives:</strong> $${(pledgeLevel.amount - ((pledgeLevel.amount * 5) / 100)).toFixed(2)}</p>
+            </div>
+        </div>
+    `;
+    paymentContainer.insertBefore(paymentInfo, paypalContainer);
+    
+    // Initialize PayPal payment
+    if (window.paypalProcessor && window.paypalProcessor.isInitialized) {
+        window.paypalProcessor.processPledge(artistId, levelId, {})
+            .then(result => {
+                showSuccessMessage(result.message);
+                setTimeout(() => {
+                    closeModal('artistModal');
+                    loadArtists();
+                }, 2000);
+            })
+            .catch(error => {
+                showErrorMessage(error.message);
+            });
+    } else {
+        // Fallback to simulation
+        const simulateButton = document.createElement('button');
+        simulateButton.className = 'btn-primary btn-large';
+        simulateButton.innerHTML = '<i class="fab fa-paypal"></i> Simulate Payment (Demo)';
+        simulateButton.onclick = async () => {
+            try {
+                const result = await PaymentProcessor.simulatePayment(artistId, levelId, {});
+                showSuccessMessage(result.message);
+                setTimeout(() => {
+                    closeModal('artistModal');
+                    loadArtists();
+                }, 2000);
+            } catch (error) {
+                showErrorMessage(error.message);
+            }
+        };
+        paypalContainer.appendChild(simulateButton);
+>>>>>>> Stashed changes
     }
 }
 
