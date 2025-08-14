@@ -314,6 +314,9 @@ class UserAuth {
         const userMenu = document.createElement('div');
         userMenu.className = 'user-menu';
         userMenu.innerHTML = `
+            <button class="btn-secondary btn-small" onclick="ArtPoster.showArtPostModal()">
+                <i class="fas fa-plus"></i> Post Art
+            </button>
             <div class="user-avatar">
                 <img src="${this.currentUser.avatar}" alt="${this.currentUser.name}">
             </div>
@@ -321,6 +324,7 @@ class UserAuth {
                 <div class="user-info">
                     <span class="user-name">${this.currentUser.name}</span>
                     <span class="user-email">${this.currentUser.email}</span>
+                    ${this.currentUser.isCreator ? '<span class="creator-badge">🎨 Artist</span>' : ''}
                 </div>
                 <div class="dropdown-menu">
                     <a href="#" onclick="UserAuth.openProfile()">
@@ -330,8 +334,8 @@ class UserAuth {
                         <i class="fas fa-heart"></i> My Pledges
                     </a>
                     ${!this.currentUser.isCreator ? `
-                        <a href="#" onclick="UserAuth.openBecomeCreator()">
-                            <i class="fas fa-star"></i> Become Creator
+                        <a href="#" onclick="ArtistProfileCreator.showArtistSetupModal()">
+                            <i class="fas fa-palette"></i> Become Artist
                         </a>
                     ` : `
                         <a href="#" onclick="UserAuth.openCreatorDashboard()">
@@ -998,6 +1002,348 @@ class CreatorDashboard {
         if (modal) {
             modal.remove();
         }
+    }
+}
+
+// Artist Profile Creation System
+class ArtistProfileCreator {
+    static async createArtistProfile(profileData) {
+        try {
+            const apiUrl = window.location.hostname === 'pledgr.art' 
+                ? 'https://pledgr.onrender.com/api/artists'
+                : '/api/artists';
+            
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${UserAuth.token}`
+                },
+                body: JSON.stringify(profileData)
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                return data;
+            } else {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to create artist profile');
+            }
+        } catch (error) {
+            console.error('Create artist profile error:', error);
+            throw error;
+        }
+    }
+
+    static async createPledgeLevel(artistId, levelData) {
+        try {
+            const apiUrl = window.location.hostname === 'pledgr.art' 
+                ? 'https://pledgr.onrender.com/api/artists'
+                : '/api/artists';
+            
+            const response = await fetch(`${apiUrl}/${artistId}/levels`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${UserAuth.token}`
+                },
+                body: JSON.stringify(levelData)
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                return data;
+            } else {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to create pledge level');
+            }
+        } catch (error) {
+            console.error('Create pledge level error:', error);
+            throw error;
+        }
+    }
+
+    static showArtistSetupModal() {
+        if (!UserAuth.currentUser) {
+            openModal('loginModal');
+            return;
+        }
+
+        const modal = document.createElement('div');
+        modal.className = 'modal artist-setup-modal';
+        modal.innerHTML = `
+            <div class="modal-content artist-setup-content">
+                <span class="close" onclick="this.parentElement.parentElement.remove()">&times;</span>
+                <div class="artist-setup">
+                    <h2>🎨 Set Up Your Artist Profile</h2>
+                    <p class="setup-subtitle">Create your page and start earning from your art in minutes!</p>
+                    
+                    <form id="artistSetupForm" class="artist-setup-form">
+                        <div class="form-section">
+                            <h3>Basic Info</h3>
+                            <div class="form-group">
+                                <label for="artistName">Artist Name *</label>
+                                <input type="text" id="artistName" required placeholder="Your artist name">
+                            </div>
+                            <div class="form-group">
+                                <label for="artistTitle">Page Title *</label>
+                                <input type="text" id="artistTitle" required placeholder="e.g., 'Digital Art Collection'">
+                            </div>
+                            <div class="form-group">
+                                <label for="artistCategory">Category *</label>
+                                <select id="artistCategory" required>
+                                    <option value="">Choose category</option>
+                                    <option value="visual">Visual Arts</option>
+                                    <option value="music">Music</option>
+                                    <option value="writing">Writing</option>
+                                    <option value="film">Film & Video</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Your Story</h3>
+                            <div class="form-group">
+                                <label for="artistDescription">Description *</label>
+                                <textarea id="artistDescription" required rows="4" placeholder="Tell your story and what you create..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="artistGoal">Monthly Goal (Optional)</label>
+                                <input type="number" id="artistGoal" min="0" step="0.01" placeholder="e.g., 500">
+                                <small>Set a monthly funding goal to motivate your supporters</small>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Support Tiers</h3>
+                            <p class="tier-info">Set up 2-3 support levels to get started. You can always add more later!</p>
+                            
+                            <div id="pledgeLevels">
+                                <div class="pledge-level-input" data-level="1">
+                                    <h4>Support Level 1</h4>
+                                    <div class="level-inputs">
+                                        <input type="text" placeholder="Name (e.g., 'Supporter')" class="level-name" required>
+                                        <input type="number" placeholder="Amount ($)" min="1" step="0.01" class="level-amount" required>
+                                        <textarea placeholder="What do supporters get?" class="level-benefits" rows="2"></textarea>
+                                    </div>
+                                </div>
+                                
+                                <div class="pledge-level-input" data-level="2">
+                                    <h4>Support Level 2</h4>
+                                    <div class="level-inputs">
+                                        <input type="text" placeholder="Name (e.g., 'Patron')" class="level-name" required>
+                                        <input type="number" placeholder="Amount ($)" min="1" step="0.01" class="level-amount" required>
+                                        <textarea placeholder="What do supporters get?" class="level-benefits" rows="2"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button type="button" class="btn-secondary btn-small" onclick="ArtistProfileCreator.addPledgeLevel()">
+                                + Add Another Level
+                            </button>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Profile Image</h3>
+                            <div class="form-group">
+                                <label for="artistImage">Cover Image URL</label>
+                                <input type="url" id="artistImage" placeholder="https://example.com/image.jpg">
+                                <small>Add a cover image to make your page look great!</small>
+                            </div>
+                        </div>
+
+                        <div class="setup-actions">
+                            <button type="submit" class="btn-primary btn-large">
+                                🚀 Create My Artist Page
+                            </button>
+                            <p class="setup-note">You'll be able to edit everything later</p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        modal.style.display = 'block';
+        
+        // Setup form submission
+        this.setupArtistForm();
+    }
+
+    static addPledgeLevel() {
+        const levelsContainer = document.getElementById('pledgeLevels');
+        const levelCount = levelsContainer.children.length + 1;
+        
+        const newLevel = document.createElement('div');
+        newLevel.className = 'pledge-level-input';
+        newLevel.dataset.level = levelCount;
+        newLevel.innerHTML = `
+            <h4>Support Level ${levelCount}</h4>
+            <div class="level-inputs">
+                <input type="text" placeholder="Name (e.g., 'VIP')" class="level-name" required>
+                <input type="number" placeholder="Amount ($)" min="1" step="0.01" class="level-amount" required>
+                <textarea placeholder="What do supporters get?" class="level-benefits" rows="2"></textarea>
+            </div>
+            <button type="button" class="remove-level" onclick="this.parentElement.remove()">×</button>
+        `;
+        
+        levelsContainer.appendChild(newLevel);
+    }
+
+    static setupArtistForm() {
+        const form = document.getElementById('artistSetupForm');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Creating...';
+            submitBtn.disabled = true;
+            
+            try {
+                // Collect form data
+                const profileData = {
+                    name: document.getElementById('artistName').value,
+                    title: document.getElementById('artistTitle').value,
+                    category: document.getElementById('artistCategory').value,
+                    description: document.getElementById('artistDescription').value,
+                    goal: parseFloat(document.getElementById('artistGoal').value) || 0,
+                    image: document.getElementById('artistImage').value || null
+                };
+
+                // Create artist profile
+                const artistResult = await this.createArtistProfile(profileData);
+                
+                // Create pledge levels
+                const levelInputs = document.querySelectorAll('.pledge-level-input');
+                for (const levelInput of levelInputs) {
+                    const name = levelInput.querySelector('.level-name').value;
+                    const amount = parseFloat(levelInput.querySelector('.level-amount').value);
+                    const benefits = levelInput.querySelector('.level-benefits').value;
+                    
+                    if (name && amount) {
+                        await this.createPledgeLevel(artistResult.artistId, {
+                            name,
+                            amount,
+                            description: `Support at $${amount}/month`,
+                            benefits: benefits || 'Access to exclusive content'
+                        });
+                    }
+                }
+
+                // Show success
+                this.showSetupSuccess(artistResult.artistId);
+                
+            } catch (error) {
+                showErrorMessage(error.message);
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+    }
+
+    static showSetupSuccess(artistId) {
+        const modal = document.querySelector('.artist-setup-modal');
+        if (!modal) return;
+
+        modal.innerHTML = `
+            <div class="modal-content success-content">
+                <div class="success-icon">
+                    🎉
+                </div>
+                <h2>Your Artist Page is Live!</h2>
+                <p>Congratulations! Your artist profile has been created and is now visible to supporters.</p>
+                
+                <div class="success-actions">
+                    <button class="btn-primary" onclick="window.location.href='/artist/${artistId}'">
+                        View My Page
+                    </button>
+                    <button class="btn-secondary" onclick="this.parentElement.parentElement.parentElement.remove()">
+                        Continue
+                    </button>
+                </div>
+                
+                <div class="next-steps">
+                    <h3>Next Steps:</h3>
+                    <ul>
+                        <li>🎨 Post your first artwork</li>
+                        <li>📢 Share your page with your audience</li>
+                        <li>💰 Start receiving support from fans</li>
+                        <li>⚙️ Customize your profile further</li>
+                    </ul>
+                </div>
+            </div>
+        `;
+    }
+}
+
+// Quick Start System
+class QuickStart {
+    static showQuickStart() {
+        const modal = document.createElement('div');
+        modal.className = 'modal quick-start-modal';
+        modal.innerHTML = `
+            <div class="modal-content quick-start-content">
+                <span class="close" onclick="this.parentElement.parentElement.remove()">&times;</span>
+                <div class="quick-start">
+                    <h2>🚀 Get Started with Pledgr</h2>
+                    <p>Choose how you want to use Pledgr:</p>
+                    
+                    <div class="quick-start-options">
+                        <div class="option-card" onclick="QuickStart.startAsArtist()">
+                            <div class="option-icon">🎨</div>
+                            <h3>I'm an Artist</h3>
+                            <p>Create your profile, post art, and start earning from supporters</p>
+                            <button class="btn-primary">Start Creating</button>
+                        </div>
+                        
+                        <div class="option-card" onclick="QuickStart.startAsSupporter()">
+                            <div class="option-icon">❤️</div>
+                            <h3>I'm a Supporter</h3>
+                            <p>Browse artists and support creators you love</p>
+                            <button class="btn-primary">Start Browsing</button>
+                        </div>
+                    </div>
+                    
+                    <div class="quick-start-features">
+                        <h3>Why Pledgr?</h3>
+                        <ul>
+                            <li>✅ Only 5% platform fee (vs 8-12% elsewhere)</li>
+                            <li>✅ Instant PayPal payments</li>
+                            <li>✅ Simple setup in minutes</li>
+                            <li>✅ Beautiful, mobile-friendly profiles</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        modal.style.display = 'block';
+    }
+
+    static startAsArtist() {
+        if (!UserAuth.currentUser) {
+            openModal('signupModal');
+            return;
+        }
+        
+        // Close quick start modal
+        const modal = document.querySelector('.quick-start-modal');
+        if (modal) modal.remove();
+        
+        // Show artist setup
+        ArtistProfileCreator.showArtistSetupModal();
+    }
+
+    static startAsSupporter() {
+        // Close quick start modal
+        const modal = document.querySelector('.quick-start-modal');
+        if (modal) modal.remove();
+        
+        // Scroll to artists section
+        scrollToSection('artists');
     }
 }
 
@@ -2116,4 +2462,208 @@ function handleSwipe() {
             });
         }
     }
-} 
+}
+
+// Art Posting System
+class ArtPoster {
+    static async createArtPost(artData) {
+        try {
+            const apiUrl = window.location.hostname === 'pledgr.art' 
+                ? 'https://pledgr.onrender.com/api/art'
+                : '/api/art';
+            
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${UserAuth.token}`
+                },
+                body: JSON.stringify(artData)
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                return data;
+            } else {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to create art post');
+            }
+        } catch (error) {
+            console.error('Create art post error:', error);
+            throw error;
+        }
+    }
+
+    static showArtPostModal() {
+        if (!UserAuth.currentUser) {
+            openModal('loginModal');
+            return;
+        }
+
+        // Check if user is an artist
+        if (!UserAuth.currentUser.isCreator) {
+            this.showBecomeArtistPrompt();
+            return;
+        }
+
+        const modal = document.createElement('div');
+        modal.className = 'modal art-post-modal';
+        modal.innerHTML = `
+            <div class="modal-content art-post-content">
+                <span class="close" onclick="this.parentElement.parentElement.remove()">&times;</span>
+                <div class="art-post">
+                    <h2>🎨 Share Your Art</h2>
+                    <p class="post-subtitle">Post your latest creation and share it with your supporters!</p>
+                    
+                    <form id="artPostForm" class="art-post-form">
+                        <div class="form-group">
+                            <label for="artTitle">Title *</label>
+                            <input type="text" id="artTitle" required placeholder="Give your art a title">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="artDescription">Description</label>
+                            <textarea id="artDescription" rows="4" placeholder="Tell the story behind your art, your inspiration, or what you're working on..."></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="artImage">Image URL *</label>
+                            <input type="url" id="artImage" required placeholder="https://example.com/your-art.jpg">
+                            <small>Upload your image to a service like Imgur, then paste the URL here</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="artTags">Tags (Optional)</label>
+                            <input type="text" id="artTags" placeholder="digital art, fantasy, character design">
+                            <small>Separate tags with commas</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="artVisibility">Visibility</label>
+                            <select id="artVisibility">
+                                <option value="public">Public - Everyone can see</option>
+                                <option value="supporters">Supporters Only - Only your supporters can see</option>
+                            </select>
+                        </div>
+                        
+                        <div class="post-actions">
+                            <button type="submit" class="btn-primary btn-large">
+                                🚀 Post My Art
+                            </button>
+                            <p class="post-note">Your art will be visible on your profile and in the main feed</p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        modal.style.display = 'block';
+        
+        // Setup form submission
+        this.setupArtForm();
+    }
+
+    static showBecomeArtistPrompt() {
+        const modal = document.createElement('div');
+        modal.className = 'modal become-artist-modal';
+        modal.innerHTML = `
+            <div class="modal-content become-artist-content">
+                <span class="close" onclick="this.parentElement.parentElement.remove()">&times;</span>
+                <div class="become-artist">
+                    <div class="become-artist-icon">🎨</div>
+                    <h2>Become an Artist First</h2>
+                    <p>To post art and start earning from supporters, you need to create an artist profile first.</p>
+                    
+                    <div class="become-artist-actions">
+                        <button class="btn-primary btn-large" onclick="ArtistProfileCreator.showArtistSetupModal()">
+                            Create Artist Profile
+                        </button>
+                        <button class="btn-secondary" onclick="this.parentElement.parentElement.parentElement.remove()">
+                            Maybe Later
+                        </button>
+                    </div>
+                    
+                    <div class="become-artist-benefits">
+                        <h3>Why become an artist?</h3>
+                        <ul>
+                            <li>💰 Earn money from your art</li>
+                            <li>👥 Build a community of supporters</li>
+                            <li>🎯 Share your creative process</li>
+                            <li>🚀 Grow your audience</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        modal.style.display = 'block';
+    }
+
+    static setupArtForm() {
+        const form = document.getElementById('artPostForm');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Posting...';
+            submitBtn.disabled = true;
+            
+            try {
+                const artData = {
+                    title: document.getElementById('artTitle').value,
+                    description: document.getElementById('artDescription').value,
+                    imageUrl: document.getElementById('artImage').value,
+                    tags: document.getElementById('artTags').value.split(',').map(tag => tag.trim()).filter(tag => tag),
+                    visibility: document.getElementById('artVisibility').value
+                };
+
+                const result = await this.createArtPost(artData);
+                
+                // Show success
+                this.showPostSuccess(result.artId);
+                
+            } catch (error) {
+                showErrorMessage(error.message);
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+    }
+
+    static showPostSuccess(artId) {
+        const modal = document.querySelector('.art-post-modal');
+        if (!modal) return;
+
+        modal.innerHTML = `
+            <div class="modal-content success-content">
+                <div class="success-icon">
+                    🎉
+                </div>
+                <h2>Art Posted Successfully!</h2>
+                <p>Your art is now live and visible to your supporters!</p>
+                
+                <div class="success-actions">
+                    <button class="btn-primary" onclick="window.location.href='/art/${artId}'">
+                        View My Post
+                    </button>
+                    <button class="btn-secondary" onclick="this.parentElement.parentElement.parentElement.remove()">
+                        Post Another
+                    </button>
+                </div>
+                
+                <div class="next-steps">
+                    <h3>What happens next?</h3>
+                    <ul>
+                        <li>📱 Your art appears on your profile</li>
+                        <li>👥 Supporters get notified (if visibility is set to supporters)</li>
+                        <li>💬 People can comment and engage</li>
+                        <li>💰 More art = more reasons for people to support you</li>
+                    </ul>
+                </div>
+            </div>
+        `;
+    }
+}

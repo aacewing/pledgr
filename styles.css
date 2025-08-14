@@ -2148,3 +2148,604 @@ body {
         padding: 0.5rem 1rem;
     }
 } 
+
+/* Artist Setup Modal */
+.artist-setup-modal .modal-content {
+    max-width: 700px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.artist-setup {
+    padding: 2rem;
+}
+
+.artist-setup h2 {
+    text-align: center;
+    margin-bottom: 0.5rem;
+    color: #333;
+    font-size: 2rem;
+}
+
+.setup-subtitle {
+    text-align: center;
+    color: #666;
+    margin-bottom: 2rem;
+    font-size: 1.1rem;
+}
+
+.artist-setup-form {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.form-section {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+}
+
+.form-section h3 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #333;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+    font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 0.5rem;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.tier-info {
+    background: #e3f2fd;
+    color: #1565c0;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.pledge-level-input {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    margin-bottom: 1rem;
+    position: relative;
+}
+
+.pledge-level-input h4 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.level-inputs {
+    display: grid;
+    gap: 1rem;
+}
+
+.level-inputs input,
+.level-inputs textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+    font-family: inherit;
+}
+
+.level-inputs input:focus,
+.level-inputs textarea:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.remove-level {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: #dc3545;
+    color: white;
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s ease;
+}
+
+.remove-level:hover {
+    background: #c82333;
+}
+
+.setup-actions {
+    text-align: center;
+    padding: 2rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+}
+
+.setup-actions button {
+    margin-bottom: 1rem;
+}
+
+.setup-note {
+    color: #666;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+/* Quick Start Modal */
+.quick-start-modal .modal-content {
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.quick-start {
+    padding: 2rem;
+    text-align: center;
+}
+
+.quick-start h2 {
+    margin-bottom: 1rem;
+    color: #333;
+    font-size: 2.5rem;
+}
+
+.quick-start > p {
+    color: #666;
+    font-size: 1.2rem;
+    margin-bottom: 3rem;
+}
+
+.quick-start-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+.option-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 16px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.option-card:hover {
+    transform: translateY(-5px);
+    border-color: #667eea;
+    box-shadow: 0 8px 30px rgba(102, 126, 234, 0.15);
+}
+
+.option-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.option-card h3 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    font-size: 1.5rem;
+}
+
+.option-card p {
+    color: #666;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+
+.quick-start-features {
+    background: #f8f9fa;
+    padding: 2rem;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    text-align: left;
+}
+
+.quick-start-features h3 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    font-size: 1.3rem;
+}
+
+.quick-start-features ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.quick-start-features li {
+    padding: 0.5rem 0;
+    color: #555;
+    font-size: 1.1rem;
+}
+
+/* Success Content Enhancements */
+.success-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.next-steps {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    text-align: left;
+}
+
+.next-steps h3 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    font-size: 1.2rem;
+}
+
+.next-steps ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.next-steps li {
+    padding: 0.5rem 0;
+    color: #555;
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.next-steps li:before {
+    content: "→";
+    position: absolute;
+    left: 0;
+    color: #667eea;
+    font-weight: bold;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .artist-setup-modal .modal-content,
+    .quick-start-modal .modal-content {
+        max-width: 95vw;
+        margin: 2.5vh auto;
+    }
+    
+    .artist-setup,
+    .quick-start {
+        padding: 1rem;
+    }
+    
+    .quick-start-options {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .option-card {
+        padding: 1.5rem;
+    }
+    
+    .success-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .success-actions button {
+        width: 100%;
+        max-width: 300px;
+    }
+} 
+
+/* Art Post Modal */
+.art-post-modal .modal-content {
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.art-post {
+    padding: 2rem;
+}
+
+.art-post h2 {
+    text-align: center;
+    margin-bottom: 0.5rem;
+    color: #333;
+    font-size: 2rem;
+}
+
+.post-subtitle {
+    text-align: center;
+    color: #666;
+    margin-bottom: 2rem;
+    font-size: 1.1rem;
+}
+
+.art-post-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.post-actions {
+    text-align: center;
+    padding: 2rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+}
+
+.post-actions button {
+    margin-bottom: 1rem;
+}
+
+.post-note {
+    color: #666;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+/* Become Artist Modal */
+.become-artist-modal .modal-content {
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.become-artist {
+    padding: 2rem;
+    text-align: center;
+}
+
+.become-artist-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.become-artist h2 {
+    margin-bottom: 1rem;
+    color: #333;
+    font-size: 1.8rem;
+}
+
+.become-artist p {
+    color: #666;
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+
+.become-artist-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.become-artist-benefits {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    text-align: left;
+}
+
+.become-artist-benefits h3 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    font-size: 1.2rem;
+}
+
+.become-artist-benefits ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.become-artist-benefits li {
+    padding: 0.5rem 0;
+    color: #555;
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.become-artist-benefits li:before {
+    content: "✅";
+    position: absolute;
+    left: 0;
+    color: #28a745;
+}
+
+/* User Menu Enhancements */
+.user-menu {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.3s ease;
+}
+
+.user-avatar:hover {
+    border-color: #667eea;
+}
+
+.user-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    padding: 1rem;
+    min-width: 250px;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+}
+
+.user-dropdown.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.user-dropdown-header {
+    padding: 1rem;
+    border-bottom: 1px solid #e9ecef;
+    margin-bottom: 1rem;
+}
+
+.user-dropdown-header h4 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.user-dropdown-header p {
+    margin: 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.creator-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-top: 0.5rem;
+}
+
+.user-dropdown-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.user-dropdown-menu li {
+    margin-bottom: 0.5rem;
+}
+
+.user-dropdown-menu a,
+.user-dropdown-menu button {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    color: #333;
+    text-decoration: none;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    border-radius: 8px;
+    transition: background-color 0.3s ease;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.user-dropdown-menu a:hover,
+.user-dropdown-menu button:hover {
+    background: #f8f9fa;
+}
+
+.user-dropdown-menu .logout {
+    color: #dc3545;
+    border-top: 1px solid #e9ecef;
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+}
+
+.user-dropdown-menu .logout:hover {
+    background: #fff5f5;
+}
+
+/* Responsive Design for New Modals */
+@media (max-width: 768px) {
+    .art-post-modal .modal-content,
+    .become-artist-modal .modal-content {
+        max-width: 95vw;
+        margin: 2.5vh auto;
+    }
+    
+    .art-post,
+    .become-artist {
+        padding: 1rem;
+    }
+    
+    .become-artist-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .become-artist-actions button {
+        width: 100%;
+        max-width: 300px;
+    }
+    
+    .user-dropdown {
+        right: -100px;
+        min-width: 200px;
+    }
+} 

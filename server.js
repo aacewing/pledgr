@@ -373,6 +373,66 @@ app.delete('/api/pledges/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// Create art post
+app.post('/api/art', authenticateToken, async (req, res) => {
+    try {
+        const { title, description, imageUrl, tags, visibility } = req.body;
+        
+        if (!title || !imageUrl) {
+            return res.status(400).json({ error: 'Title and image URL are required' });
+        }
+        
+        // Verify the user is an artist
+        const user = await db.get('SELECT isCreator FROM users WHERE id = ?', [req.user.userId]);
+        if (!user || !user.isCreator) {
+            return res.status(403).json({ error: 'You must be an artist to post art' });
+        }
+        
+        const result = await db.run(
+            'INSERT INTO art_posts (user_id, title, description, image_url, tags, visibility, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [req.user.userId, title, description || '', imageUrl, tags ? JSON.stringify(tags) : null, visibility || 'public', new Date().toISOString()]
+        );
+
+        res.json({
+            message: 'Art post created successfully',
+            artId: result.lastID
+        });
+    } catch (error) {
+        console.error('Create art post error:', error);
+        res.status(500).json({ error: 'Failed to create art post' });
+    }
+});
+
+// Get art posts
+app.get('/api/art', async (req, res) => {
+    try {
+        const { artist_id, visibility = 'public' } = req.query;
+        
+        let query = `
+            SELECT ap.*, u.name as artist_name, u.avatar as artist_avatar
+            FROM art_posts ap
+            JOIN users u ON ap.user_id = u.id
+            WHERE ap.visibility = ?
+        `;
+        
+        const params = [visibility];
+        
+        if (artist_id) {
+            query += ' AND ap.user_id = ?';
+            params.push(artist_id);
+        }
+        
+        query += ' ORDER BY ap.created_at DESC LIMIT 50';
+        
+        const posts = await db.query(query, params);
+        
+        res.json({ posts: posts || [] });
+    } catch (error) {
+        console.error('Get art posts error:', error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     res.json({ 
