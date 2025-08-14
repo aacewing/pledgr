@@ -18,22 +18,27 @@ class Database {
 
     async initPostgres() {
         try {
+            // Supabase-optimized connection pool
             this.connection = new Pool({
                 connectionString: process.env.DATABASE_URL,
                 ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-                max: 20, // Maximum number of clients in the pool
+                max: 10, // Supabase free tier: 10 connections max
                 idleTimeoutMillis: 30000,
-                connectionTimeoutMillis: 2000,
+                connectionTimeoutMillis: 5000, // Faster timeout for free tier
+                // Supabase-specific optimizations
+                statement_timeout: 30000, // 30 second query timeout
+                query_timeout: 30000,
             });
 
             // Test connection
             await this.connection.query('SELECT NOW()');
-            console.log('✅ PostgreSQL connected successfully');
+            console.log('✅ Supabase PostgreSQL connected successfully');
+            console.log('💰 Free tier: 500MB database, 10 concurrent connections');
             
             // Initialize tables
             await this.createTables();
         } catch (error) {
-            console.error('❌ PostgreSQL connection failed:', error.message);
+            console.error('❌ Supabase connection failed:', error.message);
             console.log('🔄 Falling back to SQLite...');
             this.type = 'sqlite';
             this.initSQLite();
@@ -68,7 +73,8 @@ class Database {
                 social_twitter VARCHAR(255),
                 social_instagram VARCHAR(255),
                 social_youtube VARCHAR(255),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )`,
             `CREATE TABLE IF NOT EXISTS artists (
                 id SERIAL PRIMARY KEY,
@@ -83,7 +89,9 @@ class Database {
                 pledged DECIMAL(10,2) DEFAULT 0,
                 supporters INTEGER DEFAULT 0,
                 days_left INTEGER DEFAULT 30,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                status VARCHAR(50) DEFAULT 'active',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )`,
             `CREATE TABLE IF NOT EXISTS pledge_levels (
                 id SERIAL PRIMARY KEY,
@@ -91,7 +99,9 @@ class Database {
                 name VARCHAR(255) NOT NULL,
                 amount DECIMAL(10,2) NOT NULL,
                 description TEXT,
-                benefits TEXT
+                benefits TEXT,
+                max_supporters INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )`,
             `CREATE TABLE IF NOT EXISTS pledges (
                 id SERIAL PRIMARY KEY,
@@ -100,6 +110,19 @@ class Database {
                 level_id INTEGER REFERENCES pledge_levels(id) ON DELETE CASCADE,
                 amount DECIMAL(10,2) NOT NULL,
                 status VARCHAR(50) DEFAULT 'active',
+                payment_method VARCHAR(100),
+                transaction_id VARCHAR(255),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )`,
+            `CREATE TABLE IF NOT EXISTS revenue (
+                id SERIAL PRIMARY KEY,
+                pledge_id INTEGER REFERENCES pledges(id) ON DELETE CASCADE,
+                artist_id INTEGER REFERENCES artists(id) ON DELETE CASCADE,
+                amount DECIMAL(10,2) NOT NULL,
+                platform_fee DECIMAL(10,2) DEFAULT 0.05, -- 5% platform fee
+                artist_payout DECIMAL(10,2) NOT NULL,
+                status VARCHAR(50) DEFAULT 'pending',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )`
         ];
@@ -114,13 +137,16 @@ class Database {
             }
         }
 
-        // Create indexes for performance
+        // Create indexes for performance (Supabase free tier optimized)
         const indexes = [
             'CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)',
             'CREATE INDEX IF NOT EXISTS idx_artists_user_id ON artists(user_id)',
+            'CREATE INDEX IF NOT EXISTS idx_artists_status ON artists(status)',
             'CREATE INDEX IF NOT EXISTS idx_pledges_user_id ON pledges(user_id)',
             'CREATE INDEX IF NOT EXISTS idx_pledges_artist_id ON pledges(artist_id)',
-            'CREATE INDEX IF NOT EXISTS idx_pledges_status ON pledges(status)'
+            'CREATE INDEX IF NOT EXISTS idx_pledges_status ON pledges(status)',
+            'CREATE INDEX IF NOT EXISTS idx_revenue_artist_id ON revenue(artist_id)',
+            'CREATE INDEX IF NOT EXISTS idx_revenue_status ON revenue(status)'
         ];
 
         for (const index of indexes) {
@@ -129,6 +155,38 @@ class Database {
             } catch (error) {
                 console.log('Index creation note:', error.message);
             }
+        }
+
+        // Create revenue tracking function
+        try {
+            await this.connection.query(`
+                CREATE OR REPLACE FUNCTION calculate_pledge_revenue()
+                RETURNS TRIGGER AS $$
+                BEGIN
+                    IF NEW.status = 'completed' AND OLD.status != 'completed' THEN
+                        INSERT INTO revenue (pledge_id, artist_id, amount, artist_payout)
+                        VALUES (
+                            NEW.id, 
+                            NEW.artist_id, 
+                            NEW.amount,
+                            NEW.amount * (1 - 0.05) -- 95% to artist, 5% platform fee
+                        );
+                    END IF;
+                    RETURN NEW;
+                END;
+                $$ LANGUAGE plpgsql;
+            `);
+
+            // Create trigger for automatic revenue calculation
+            await this.connection.query(`
+                DROP TRIGGER IF EXISTS trigger_pledge_revenue ON pledges;
+                CREATE TRIGGER trigger_pledge_revenue
+                    AFTER UPDATE ON pledges
+                    FOR EACH ROW
+                    EXECUTE FUNCTION calculate_pledge_revenue();
+            `);
+        } catch (error) {
+            console.log('Revenue function creation note:', error.message);
         }
     }
 
