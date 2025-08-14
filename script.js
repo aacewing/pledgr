@@ -8,7 +8,7 @@ class UserAuth {
         if (this.token) {
             try {
                 const apiUrl = window.location.hostname === 'pledgr.art' 
-                    ? 'https://pledgr-production.onrender.com/api/auth/me'
+                    ? 'https://pledgr.onrender.com/api/auth/me'
                     : '/api/auth/me';
                 
                 const response = await fetch(apiUrl, {
@@ -43,9 +43,9 @@ class UserAuth {
     // Register new user
     static async register(userData) {
         try {
-            const apiUrl = window.location.hostname === 'pledgr.art' 
-                ? 'https://pledgr-production.onrender.com/api/auth/register'
-                : '/api/auth/register';
+                            const apiUrl = window.location.hostname === 'pledgr.art' 
+                    ? 'https://pledgr.onrender.com/api/auth/register'
+                    : '/api/auth/register';
             
             const response = await fetch(apiUrl, {
                 method: 'POST',
@@ -89,9 +89,9 @@ class UserAuth {
     // Login user
     static async login(email, password) {
         try {
-            const apiUrl = window.location.hostname === 'pledgr.art' 
-                ? 'https://pledgr-production.onrender.com/api/auth/login'
-                : '/api/auth/login';
+                            const apiUrl = window.location.hostname === 'pledgr.art' 
+                    ? 'https://pledgr.onrender.com/api/auth/login'
+                    : '/api/auth/login';
             
             const response = await fetch(apiUrl, {
                 method: 'POST',
@@ -1156,7 +1156,7 @@ async function loadArtists(category = 'all') {
     try {
         // Use your live backend URL
         const apiUrl = window.location.hostname === 'pledgr.art' 
-            ? `https://pledgr-production.onrender.com/api/artists?category=${category}`
+            ? `https://pledgr.onrender.com/api/artists?category=${category}`
             : `/api/artists?category=${category}`;
         
         const response = await fetch(apiUrl);
