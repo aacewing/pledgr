@@ -1,12 +1,11 @@
 services:
   - type: web
-    name: pledgr
+    name: pledgr-production
     env: node
     buildCommand: npm install
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
-      - key: JWT_SECRET
-        generateValue: true
-    healthCheckPath: / 
+      - key: PORT
+        value: 3000 
