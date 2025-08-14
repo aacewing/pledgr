@@ -8,7 +8,8 @@
     "dev": "nodemon server.js",
     "build": "echo 'Static site - no build required'",
     "deploy": "echo 'Ready for deployment'",
-    "vercel-build": "echo 'Vercel build complete'"
+    "vercel-build": "echo 'Vercel build complete'",
+    "frontend": "npx http-server -p 8000 -o"
   },
   "keywords": [
     "artists",
