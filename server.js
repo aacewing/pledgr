@@ -1,3 +1,4 @@
+// Pledgr Backend Server - Updated for Render deployment
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
