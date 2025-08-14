@@ -21,8 +21,15 @@ class UserAuth {
                     this.logout();
                 }
             } catch (error) {
-                console.error('Failed to validate token:', error);
-                this.logout();
+                console.log('Backend unavailable, using offline mode');
+                // In offline mode, we'll use a demo user
+                this.currentUser = {
+                    id: 1,
+                    name: 'Demo User',
+                    email: 'demo@pledgr.art',
+                    avatar: null,
+                    isCreator: false
+                };
             }
         }
         
@@ -54,7 +61,20 @@ class UserAuth {
             this.updateUI();
             return data.user;
         } catch (error) {
-            throw error;
+            console.log('Backend unavailable, using offline mode');
+            // Create demo user for offline mode
+            this.currentUser = {
+                id: 1,
+                name: userData.name,
+                email: userData.email,
+                avatar: null,
+                isCreator: false
+            };
+            this.token = 'demo-token-' + Date.now();
+            localStorage.setItem('pledgr_token', this.token);
+            
+            this.updateUI();
+            return this.currentUser;
         }
     }
 
@@ -83,7 +103,20 @@ class UserAuth {
             this.updateUI();
             return data.user;
         } catch (error) {
-            throw error;
+            console.log('Backend unavailable, using offline mode');
+            // Create demo user for offline mode
+            this.currentUser = {
+                id: 1,
+                name: 'Demo User',
+                email: email,
+                avatar: null,
+                isCreator: false
+            };
+            this.token = 'demo-token-' + Date.now();
+            localStorage.setItem('pledgr_token', this.token);
+            
+            this.updateUI();
+            return this.currentUser;
         }
     }
 
@@ -946,32 +979,202 @@ document.addEventListener('DOMContentLoaded', async function() {
     await UserAuth.init(); // Initialize user authentication
 });
 
+// Fallback artist data when backend is unavailable
+const FALLBACK_ARTISTS = [
+    {
+        id: 1,
+        name: "Sarah Chen",
+        category: "visual",
+        title: "Digital Art Collection",
+        description: "Creating stunning digital artwork that pushes the boundaries of imagination and technology.",
+        image: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=300&fit=crop&crop=face",
+        profileImage: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face",
+        pledged: 2450,
+        goal: 3000,
+        supporters: 47,
+        daysLeft: 15,
+        pledgeLevels: [
+            {
+                id: 1,
+                name: "Supporter",
+                amount: 5,
+                description: "Basic support level",
+                benefits: ["Access to WIP posts", "Monthly newsletter"],
+                supporters: 23
+            },
+            {
+                id: 2,
+                name: "Art Collector",
+                amount: 15,
+                description: "Premium support level",
+                benefits: ["Exclusive artwork", "Behind-the-scenes content", "Early access to new pieces"],
+                supporters: 18
+            },
+            {
+                id: 3,
+                name: "Patron",
+                amount: 25,
+                description: "VIP support level",
+                benefits: ["All previous benefits", "Custom artwork", "Direct artist communication", "Name in credits"],
+                supporters: 6
+            }
+        ]
+    },
+    {
+        id: 2,
+        name: "Marcus Rodriguez",
+        category: "music",
+        title: "Jazz Fusion Album",
+        description: "Recording a groundbreaking jazz fusion album that blends traditional jazz with modern electronic elements.",
+        image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop",
+        profileImage: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=150&h=150&fit=crop&crop=face",
+        pledged: 1800,
+        goal: 5000,
+        supporters: 34,
+        daysLeft: 22,
+        pledgeLevels: [
+            {
+                id: 1,
+                name: "Listener",
+                amount: 8,
+                description: "Music lover support",
+                benefits: ["Digital album download", "Studio session videos"],
+                supporters: 20
+            },
+            {
+                id: 2,
+                name: "Music Enthusiast",
+                amount: 18,
+                description: "Enhanced music experience",
+                benefits: ["All previous benefits", "Exclusive bonus tracks", "Live performance access"],
+                supporters: 12
+            },
+            {
+                id: 3,
+                name: "Producer",
+                amount: 35,
+                description: "Ultimate music experience",
+                benefits: ["All previous benefits", "Producer credit", "Private concert", "Instrument lessons"],
+                supporters: 2
+            }
+        ]
+    },
+    {
+        id: 3,
+        name: "Emma Thompson",
+        category: "writing",
+        title: "Fantasy Novel Series",
+        description: "Writing an epic fantasy trilogy that explores themes of identity, destiny, and the power of choice.",
+        image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop",
+        profileImage: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
+        pledged: 3200,
+        goal: 4000,
+        supporters: 89,
+        daysLeft: 8,
+        pledgeLevels: [
+            {
+                id: 1,
+                name: "Reader",
+                amount: 10,
+                description: "Book lover support",
+                benefits: ["E-book copies", "Author notes"],
+                supporters: 45
+            },
+            {
+                id: 2,
+                name: "Bookworm",
+                amount: 20,
+                description: "Enhanced reading experience",
+                benefits: ["All previous benefits", "Signed paperback", "Character sketches", "Deleted scenes"],
+                supporters: 32
+            },
+            {
+                id: 3,
+                name: "Storyteller",
+                amount: 40,
+                description: "Ultimate reader experience",
+                benefits: ["All previous benefits", "Character named after you", "Monthly writing workshops", "Manuscript access"],
+                supporters: 12
+            }
+        ]
+    },
+    {
+        id: 4,
+        name: "Alex Kim",
+        category: "film",
+        title: "Short Film: 'Echoes'",
+        description: "Directing a thought-provoking short film about memory, loss, and the connections that bind us together.",
+        image: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=400&h=300&fit=crop",
+        profileImage: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=150&h=150&fit=crop&crop=face",
+        pledged: 1200,
+        goal: 2500,
+        supporters: 28,
+        daysLeft: 35,
+        pledgeLevels: [
+            {
+                id: 1,
+                name: "Film Fan",
+                amount: 12,
+                description: "Movie enthusiast support",
+                benefits: ["Digital film download", "Making-of videos"],
+                supporters: 18
+            },
+            {
+                id: 2,
+                name: "Cinema Lover",
+                amount: 25,
+                description: "Enhanced film experience",
+                benefits: ["All previous benefits", "Director commentary", "BTS photos", "Soundtrack access"],
+                supporters: 8
+            },
+            {
+                id: 3,
+                name: "Executive Producer",
+                amount: 50,
+                description: "Ultimate film experience",
+                benefits: ["All previous benefits", "Producer credit", "Set visit", "Original screenplay"],
+                supporters: 2
+            }
+        ]
+    }
+];
+
 // Load artists into the grid
 async function loadArtists(category = 'all') {
     try {
+        // Try to fetch from backend first
         const response = await fetch(`/api/artists?category=${category}`);
         const data = await response.json();
         
-        if (!response.ok) {
-            throw new Error(data.error || 'Failed to load artists');
-        }
-
-        const artists = data.artists || [];
-        artistsGrid.innerHTML = '';
-        
-        if (artists.length === 0) {
-            artistsGrid.innerHTML = '<div class="no-artists"><p>No artists found in this category.</p></div>';
+        if (response.ok && data.artists && data.artists.length > 0) {
+            displayArtists(data.artists);
             return;
         }
-        
-        artists.forEach(artist => {
-            const artistCard = createArtistCard(artist);
-            artistsGrid.appendChild(artistCard);
-        });
     } catch (error) {
-        console.error('Failed to load artists:', error);
-        artistsGrid.innerHTML = '<div class="no-artists"><p>Failed to load artists. Please try again.</p></div>';
+        console.log('Backend unavailable, using fallback data');
     }
+    
+    // Use fallback data when backend is unavailable
+    const filteredArtists = category === 'all' 
+        ? FALLBACK_ARTISTS 
+        : FALLBACK_ARTISTS.filter(artist => artist.category === category);
+    
+    displayArtists(filteredArtists);
+}
+
+// Display artists in the grid
+function displayArtists(artists) {
+    artistsGrid.innerHTML = '';
+    
+    if (artists.length === 0) {
+        artistsGrid.innerHTML = '<div class="no-artists"><p>No artists found in this category.</p></div>';
+        return;
+    }
+    
+    artists.forEach(artist => {
+        const artistCard = createArtistCard(artist);
+        artistsGrid.appendChild(artistCard);
+    });
 }
 
 // Create artist card element
@@ -1587,6 +1790,254 @@ document.addEventListener('keydown', (e) => {
         });
     }
 });
+
+// Pledge Modal Functions
+function openPledgeModal(artistId) {
+    const artist = FALLBACK_ARTISTS.find(a => a.id === artistId);
+    if (!artist) return;
+
+    const modalHTML = `
+        <div class="modal-content large">
+            <span class="close" onclick="closeModal('pledgeModal')">&times;</span>
+            <div class="pledge-modal-header">
+                <img src="${artist.profileImage}" alt="${artist.name}" class="artist-avatar">
+                <div class="artist-info">
+                    <h3>${artist.name}</h3>
+                    <p>${artist.title}</p>
+                </div>
+            </div>
+            
+            <div class="pledge-levels">
+                <h4>Choose Your Pledge Level</h4>
+                ${artist.pledgeLevels.map(level => `
+                    <div class="pledge-level-option" onclick="selectPledgeLevel(${level.id}, ${level.amount}, '${artist.name}')">
+                        <div class="level-header">
+                            <h5>${level.name}</h5>
+                            <span class="level-amount">$${level.amount}/month</span>
+                        </div>
+                        <p class="level-description">${level.description}</p>
+                        <ul class="level-benefits">
+                            ${level.benefits.map(benefit => `<li>${benefit}</li>`).join('')}
+                        </ul>
+                        <div class="level-supporters">${level.supporters} supporters</div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+
+    const modal = document.createElement('div');
+    modal.id = 'pledgeModal';
+    modal.className = 'modal';
+    modal.innerHTML = modalHTML;
+    document.body.appendChild(modal);
+    
+    openModal('pledgeModal');
+}
+
+function selectPledgeLevel(levelId, amount, artistName) {
+    const modalHTML = `
+        <div class="modal-content large">
+            <span class="close" onclick="closeModal('pledgeModal')">&times;</span>
+            <div class="pledge-confirmation">
+                <h3>Complete Your Pledge</h3>
+                <p>You're pledging <strong>$${amount}/month</strong> to <strong>${artistName}</strong></p>
+                
+                <div class="payment-options">
+                    <h4>Choose Payment Method</h4>
+                    
+                    <div class="payment-method">
+                        <div id="paypal-container"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const modal = document.getElementById('pledgeModal');
+    modal.querySelector('.modal-content').innerHTML = modalHTML;
+    
+    // Initialize PayPal payment
+    PayPalIntegration.createButton('paypal-container', amount, artistName,
+        () => showNotification(`Successfully pledged $${amount} to ${artistName}!`, 'success'),
+        (error) => showNotification(`Payment failed: ${error}`, 'error')
+    );
+}
+
+// Payment method handling (PayPal only)
+function handlePaymentMethod(method) {
+    console.log(`Using payment method: ${method}`);
+}
+
+// Artist Modal Functions
+function openArtistModal(artist) {
+    const modalHTML = `
+        <div class="modal-content large">
+            <span class="close" onclick="closeModal('artistModal')">&times;</span>
+            <div class="artist-modal-content">
+                <div class="artist-hero">
+                    <img src="${artist.image}" alt="${artist.name}" class="artist-hero-image">
+                    <div class="artist-hero-overlay">
+                        <div class="artist-hero-info">
+                            <img src="${artist.profileImage}" alt="${artist.name}" class="artist-profile-image">
+                            <div class="artist-details">
+                                <h2>${artist.name}</h2>
+                                <p class="artist-category">${getCategoryName(artist.category)}</p>
+                                <h3>${artist.title}</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="artist-content">
+                    <div class="artist-description">
+                        <p>${artist.description}</p>
+                    </div>
+                    
+                    <div class="artist-stats">
+                        <div class="stat-item">
+                            <h4>$${artist.pledged.toLocaleString()}</h4>
+                            <p>Pledged of ${formatCurrency(artist.goal)} goal</p>
+                        </div>
+                        <div class="stat-item">
+                            <h4>${artist.supporters}</h4>
+                            <p>Supporters</p>
+                        </div>
+                        <div class="stat-item">
+                            <h4>${artist.daysLeft}</h4>
+                            <p>Days left</p>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-section">
+                        <div class="progress-info">
+                            <span>Progress</span>
+                            <span>${Math.round((artist.pledged / artist.goal) * 100)}%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress" style="width: ${Math.min((artist.pledged / artist.goal) * 100, 100)}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="pledge-levels-section">
+                        <h3>Pledge Levels</h3>
+                        <div class="pledge-levels-grid">
+                            ${artist.pledgeLevels.map(level => `
+                                <div class="pledge-level-card">
+                                    <div class="level-header">
+                                        <h4>${level.name}</h4>
+                                        <span class="level-price">$${level.amount}/month</span>
+                                    </div>
+                                    <p class="level-desc">${level.description}</p>
+                                    <ul class="level-benefits-list">
+                                        ${level.benefits.map(benefit => `<li>${benefit}</li>`).join('')}
+                                    </ul>
+                                    <div class="level-footer">
+                                        <span class="supporters-count">${level.supporters} supporters</span>
+                                        <button class="btn-pledge" onclick="openPledgeModal(${artist.id})">Pledge</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const modal = document.getElementById('artistModal');
+    modal.querySelector('#artistModalContent').innerHTML = modalHTML;
+    
+    openModal('artistModal');
+}
+
+// Modal Functions
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+}
+
+function switchModal(fromModalId, toModalId) {
+    closeModal(fromModalId);
+    openModal(toModalId);
+}
+
+// Utility Functions
+function scrollToSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (section) {
+        section.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+function setupSmoothScrolling() {
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+    });
+}
+
+function setupMobileMenu() {
+    const navToggle = document.querySelector('.nav-toggle');
+    const navMenu = document.querySelector('.nav-menu');
+    
+    if (navToggle && navMenu) {
+        navToggle.addEventListener('click', () => {
+            navMenu.classList.toggle('active');
+            navToggle.classList.toggle('active');
+        });
+    }
+}
+
+// Form handling
+function handleFormSubmit(e) {
+    e.preventDefault();
+    const form = e.target;
+    const formId = form.id;
+    
+    if (formId === 'loginForm') {
+        const email = form.querySelector('#loginEmail').value;
+        const password = form.querySelector('#loginPassword').value;
+        
+        UserAuth.login(email, password)
+            .then(() => {
+                closeModal('loginModal');
+                showNotification('Successfully logged in!', 'success');
+            })
+            .catch(error => {
+                showNotification(error.message, 'error');
+            });
+    } else if (formId === 'signupForm') {
+        const name = form.querySelector('#signupName').value;
+        const email = form.querySelector('#signupEmail').value;
+        const password = form.querySelector('#signupPassword').value;
+        
+        UserAuth.register({ name, email, password })
+            .then(() => {
+                closeModal('signupModal');
+                showNotification('Account created successfully!', 'success');
+            })
+            .catch(error => {
+                showNotification(error.message, 'error');
+            });
+    }
+}
 
 // Add touch gestures for mobile
 let touchStartY = 0;

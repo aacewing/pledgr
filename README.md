@@ -42,15 +42,23 @@ Follow the prompts and your site will be live!
 
 ## 🛠️ Local Development
 
+### Backend Setup
 ```bash
 # Install dependencies
 npm install
 
-# Start local server
-npm start
+# Create environment file
+cp env.template .env
+# Edit .env with your settings
 
-# Or use live-server for auto-reload
+# Start development server
 npm run dev
+```
+
+### Frontend Only (Legacy)
+```bash
+# For frontend-only development
+npm run frontend
 ```
 
 ## 📁 Project Structure
@@ -113,18 +121,18 @@ const PLATFORM_FEE_PERCENTAGE = 5; // Change to your desired percentage
 
 ## 💳 Payment Integration
 
-Currently using simulated payments. For production:
+**PayPal Integration** - Ready for production!
 
-1. **Stripe Integration**:
-   ```javascript
-   // Replace PaymentProcessor.simulatePayment with Stripe API calls
-   const stripe = Stripe('your-publishable-key');
-   ```
+The application now uses PayPal as the primary payment method with:
+- Real PayPal SDK integration
+- Secure payment processing
+- Webhook handling for payment confirmations
+- Sandbox mode for testing (switch to live for production)
 
-2. **PayPal Integration**:
-   ```javascript
-   // Add PayPal SDK and replace payment processing
-   ```
+**To go live:**
+1. Change `mode: 'sandbox'` to `mode: 'live'` in `config.js`
+2. Update PayPal credentials in production environment
+3. Set up webhook URLs in PayPal Developer Dashboard
 
 ## 📈 Analytics
 

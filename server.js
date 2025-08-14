@@ -5,14 +5,51 @@ const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const bodyParser = require('body-parser');
 const path = require('path');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this';
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? 
+    (() => { throw new Error('JWT_SECRET must be set in production') })() : 
+    'dev-secret-key-change-this-in-production');
 
 // Middleware
-app.use(cors());
+const corsOptions = {
+    origin: process.env.NODE_ENV === 'production' 
+        ? ['https://pledgr.art', 'https://www.pledgr.art']
+        : true,
+    credentials: true,
+    optionsSuccessStatus: 200
+};
+
+// Security middleware
+app.use(helmet());
+
+// Rate limiting
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per windowMs
+    message: 'Too many requests from this IP, please try again later.',
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+app.use('/api/', limiter);
+
+// Stricter rate limiting for auth endpoints
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // limit each IP to 5 requests per windowMs
+    message: 'Too many authentication attempts, please try again later.',
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+app.use('/api/auth/', authLimiter);
+
+app.use(cors(corsOptions));
 app.use(bodyParser.json());
 app.use(express.static('.'));
 
@@ -403,6 +440,38 @@ app.delete('/api/pledges/:id', authenticateToken, (req, res) => {
             res.json({ message: 'Pledge cancelled successfully' });
         }
     );
+});
+
+// PayPal webhook endpoint
+app.post('/api/paypal/webhook', async (req, res) => {
+    try {
+        const paypalBackend = new PayPalBackend();
+        const result = await paypalBackend.processWebhook(req.body, req.headers);
+        
+        res.json(result);
+    } catch (error) {
+        console.error('PayPal webhook error:', error);
+        res.status(500).json({ error: 'Webhook processing failed' });
+    }
+});
+
+// PayPal payment verification endpoint
+app.post('/api/paypal/verify', async (req, res) => {
+    try {
+        const { orderId } = req.body;
+        
+        if (!orderId) {
+            return res.status(400).json({ error: 'Order ID is required' });
+        }
+        
+        const paypalBackend = new PayPalBackend();
+        const verification = await paypalBackend.verifyPayment(orderId);
+        
+        res.json(verification);
+    } catch (error) {
+        console.error('PayPal verification error:', error);
+        res.status(500).json({ error: 'Payment verification failed' });
+    }
 });
 
 // Serve the main page
